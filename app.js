@@ -131,7 +131,7 @@ function mountMap(){
   drawMap();
 }
 function fitAll(){const pts=S.stops.filter(hasXY).map(s=>[s.lat,s.lon]);if(MAP&&pts.length)MAP.fitBounds(pts,{padding:[24,24]})}
-const legOk=(p,s)=>s.route&&s.route.for===p.id&&s.route.from===`${p.lat},${p.lon}`&&s.route.to===`${s.lat},${s.lon}`;
+const legOk=(p,s)=>s.route&&s.route.v===2&&s.route.for===p.id&&s.route.from===`${p.lat},${p.lon}`&&s.route.to===`${s.lat},${s.lon}`;
 function legArrows(pts,earth){
   const cl=Math.cos(pts[0][0]*Math.PI/180),seg=[];let tot=0;
   for(let i=1;i<pts.length;i++){const dx=(pts[i][1]-pts[i-1][1])*cl,dy=pts[i][0]-pts[i-1][0],d=Math.hypot(dx,dy);seg.push(d);tot+=d}
@@ -173,15 +173,38 @@ function simplify(pts,tol){if(pts.length<3)return pts;const keep=new Uint8Array(
     for(let i=a+1;i<b;i++){const [py,px]=pts[i];let t=((px-ax)*dx+(py-ay)*dy)/L2;t=Math.max(0,Math.min(1,t));const ex=ax+t*dx-px,ey=ay+t*dy-py,d=ex*ex+ey*ey;if(d>mx){mx=d;ix=i}}
     if(mx>tol*tol&&ix>0){keep[ix]=1;st.push([a,ix],[ix,b])}}
   return pts.filter((_,i)=>keep[i])}
+/* Routing: Valhalla (FOSSGIS, OpenStreetMap data) avoiding unsealed roads at camper speed; fallbacks keep the app working. */
+function decode6(str){let i=0,lat=0,lon=0;const out=[];while(i<str.length){for(const k of [0,1]){let b,sh=0,r=0;do{b=str.charCodeAt(i++)-63;r|=(b&31)<<sh;sh+=5}while(b>=32);const d=(r&1)?~(r>>1):(r>>1);if(k===0)lat+=d;else lon+=d}out.push([+(lat/1e6).toFixed(5),+(lon/1e6).toFixed(5)])}return out}
+async function valhalla(p,s,opts){
+  const q={locations:[{lat:p.lat,lon:p.lon},{lat:s.lat,lon:s.lon}],costing:"auto",directions_type:"none",units:"kilometers"};
+  if(opts)q.costing_options={auto:opts};
+  try{const r=await fetch("https://valhalla1.openstreetmap.de/route",{method:"POST",body:JSON.stringify(q)});if(!r.ok)return null;
+    const j=await r.json(),t=j&&j.trip;if(!t||!t.legs||!t.legs[0])return null;
+    return {pts:decode6(t.legs[0].shape),km:t.summary.length,min:t.summary.time/60}}catch(_){return null}
+}
+const CAMPER_FACTOR=1.12;
+async function routeLeg(p,s){
+  let r=await valhalla(p,s,{exclude_unpaved:true,top_speed:100});
+  if(r)return {...r,src:"valhalla",unpaved:false,camper:true};
+  await new Promise(x=>setTimeout(x,1100));
+  r=await valhalla(p,s,{top_speed:100});
+  if(r)return {...r,src:"valhalla",unpaved:true,camper:true};
+  await new Promise(x=>setTimeout(x,1100));
+  r=await valhalla(p,s,null);
+  if(r)return {...r,min:r.min*CAMPER_FACTOR,src:"valhalla",unpaved:true,camper:false};
+  try{const x=await fetch(`https://router.project-osrm.org/route/v1/driving/${p.lon},${p.lat};${s.lon},${s.lat}?overview=full&geometries=geojson`);
+    if(x.ok){const j=await x.json(),rt=j&&j.routes&&j.routes[0];
+      if(rt)return {pts:rt.geometry.coordinates.map(([lo,la])=>[+la.toFixed(5),+lo.toFixed(5)]),km:rt.distance/1000,min:rt.duration/60*CAMPER_FACTOR,src:"osrm",unpaved:null,camper:false}}}catch(_){}
+  return null;
+}
 const RQ={busy:false,again:false,failed:new Set()};
 async function fetchRoutes(){
   if(RQ.busy){RQ.again=true;return}if(!navigator.onLine)return;RQ.busy=true;
   try{for(let i=1;i<S.stops.length;i++){const p=S.stops[i-1],s=S.stops[i];if(!hasXY(p)||!hasXY(s)||legOk(p,s))continue;
       const key=`${p.lat},${p.lon}>${s.lat},${s.lon}`;if(RQ.failed.has(key))continue;
-      let j=null;try{const r=await fetch(`https://router.project-osrm.org/route/v1/driving/${p.lon},${p.lat};${s.lon},${s.lat}?overview=full&geometries=geojson`);if(r.ok)j=await r.json()}catch(_){}
-      const rt=j&&j.routes&&j.routes[0];if(!rt){RQ.failed.add(key);continue}
-      const c=simplify(rt.geometry.coordinates.map(([lo,la])=>[+la.toFixed(5),+lo.toFixed(5)]),0.0004);
-      const upd={route:{for:p.id,from:`${p.lat},${p.lon}`,to:`${s.lat},${s.lon}`,c},roadKm:Math.round(rt.distance/100)/10,roadMin:Math.round(rt.duration/60),roadFor:p.id};
+      const rt=await routeLeg(p,s);if(!rt){RQ.failed.add(key);continue}
+      const c=simplify(rt.pts,0.0004);
+      const upd={route:{v:2,src:rt.src,unpaved:rt.unpaved,camper:rt.camper,for:p.id,from:`${p.lat},${p.lon}`,to:`${s.lat},${s.lon}`,c},roadKm:Math.round(rt.km*10)/10,roadMin:Math.round(rt.min),roadFor:p.id};
       const cur=Store.docs.get("stops/"+s.id);if(!cur)continue;
       if(!S.ro){try{await put("stops",s.id,{...cur,...upd})}catch(_){localOnly("stops",s.id,{...cur,...upd})}}else localOnly("stops",s.id,{...cur,...upd});
       await new Promise(r=>setTimeout(r,1100))}}
@@ -214,7 +237,7 @@ function renderRoute(){
   S.stops.forEach((s,i)=>{
     const p=S.stops[i-1];
     if(i>0){const L=c.legs[i],km=L?L.km:null,a=L&&!L.real?"≈ ":"";
-      items+= L?`<li class="leg">${a}${km} km · ${a}${fmtMin(L.min)}${L.real?"":" (estimate)"}${km>400?' <span class="long">Long drive day</span>':""}${hasXY(p)&&hasXY(s)?` · <a href="${mapsLink(p,s)}" target="_blank" rel="noopener">Directions</a>`:""}</li>`:`<li class="leg">Add coordinates to see the distance</li>`}
+      items+= L?`<li class="leg">${a}${km} km · ${a}${fmtMin(L.min)}${L.real?"":" (estimate)"}${km>400?' <span class="long">Long drive day</span>':""}${s.route&&s.route.v===2&&s.route.unpaved!==false?` <span class="long" title="${s.route.unpaved===null?"Route from a car router that may use unsealed roads":"No fully sealed road found for this leg"}">Unsealed road possible</span>`:""}${hasXY(p)&&hasXY(s)?` · <a href="${mapsLink(p,s)}" target="_blank" rel="noopener">Directions</a>`:""}</li>`:`<li class="leg">Add coordinates to see the distance</li>`}
     const n=Number(s.nights)||0,h=s.highlights||[];
     const chip=s.kind==="optional"?`<span class="chip opt">optional</span>`:(n&&s.kind!=="day")?`<span class="chip ${s.nightsGuess?"guess":""}">${n} night${n>1?"s":""}</span>`:`<span class="chip day">day stop</span>`;
     const d=dateOf(s._day);
