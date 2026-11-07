@@ -204,7 +204,7 @@ function stopEditor(s){
     <div class="row"><select id="hk-new" style="width:120px" ${dis} aria-label="New highlight type">${KINDS.map(k=>`<option>${k}</option>`).join("")}</select><input id="hn-new" placeholder="Add a highlight, surf spot, campsite…" style="flex:1;width:auto" ${dis}><button class="btn" data-act="hadd" ${dis}>Add</button></div>
     <label class="f">Notes<textarea id="no-${s.id}" data-f="notes" ${dis}>${esc(s.notes)}</textarea></label>
     <div class="row"><button class="btn ghost" data-act="up" ${dis}>Move up</button><button class="btn ghost" data-act="down" ${dis}>Move down</button></div>
-    ${conf||`<div class="actbar"><button class="btn" data-act="stopsave">Save</button><button class="btn ghost" data-act="del" style="color:var(--earth)" ${dis}>Delete stop</button></div>`}</div>`;
+    ${conf||`<div class="actbar"><button class="btn ghost" data-act="del" style="color:var(--earth)" ${dis}>Delete stop</button><button class="btn" data-act="stopsave">Save</button></div>`}</div>`;
 }
 
 function renderRoute(){
@@ -512,7 +512,7 @@ function surfCard(sp){
     </div>
     <label class="f">Notes<textarea id="sfno-${sp.id}" data-sf="note" placeholder="Best swell, wind, tide, parking…" ${dis}>${esc(sp.note)}</textarea></label>
     <div class="row"><button class="btn ghost" data-act="sfshow">Show on map</button><button class="btn ghost" data-act="sfctrip" ${dis}>Add to trip</button></div>
-    ${conf||`<div class="actbar"><button class="btn" data-act="sfcsave">Save</button><button class="btn ghost" data-act="sfcdel" style="color:var(--earth)" ${dis}>Delete spot</button></div>`}</div></li>`;
+    ${conf||`<div class="actbar"><button class="btn ghost" data-act="sfcdel" style="color:var(--earth)" ${dis}>Delete spot</button><button class="btn" data-act="sfcsave">Save</button></div>`}</div></li>`;
 }
 function renderSurf(){
   const dis=S.ro?"disabled":"";
