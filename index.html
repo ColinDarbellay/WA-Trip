@@ -68,7 +68,26 @@ button{font:inherit;cursor:pointer}
 .leaflet-control-layers-base input:checked+span{background:var(--ocean);color:var(--ocean-ink);border-radius:999px}
 .leaflet-control-layers-base input:checked+span span{color:var(--ocean-ink)}
 .leaflet-control-layers-base input:focus-visible+span{outline:2px solid var(--earth);outline-offset:1px}
-.leaflet-control-layers-separator,.leaflet-control-layers-overlays{display:none}
+.leaflet-control-layers-list{display:flex;flex-wrap:wrap;gap:2px;align-items:center}
+.leaflet-control-layers-separator{display:none}
+.leaflet-control-layers-overlays{display:flex}
+.leaflet-control-layers-overlays label{margin:0}
+.leaflet-control-layers-overlays input{position:absolute;opacity:0;pointer-events:none}
+.leaflet-control-layers-overlays label span span{display:block;padding:5px 12px;border-radius:999px;font-weight:700;font-size:12.5px;color:var(--muted);cursor:pointer}
+.leaflet-control-layers-overlays input:checked+span{background:var(--warn);border-radius:999px;color:#2A1E05}
+.leaflet-control-layers-overlays input:checked+span span{color:#2A1E05}
+.leaflet-control-layers-overlays input:focus-visible+span{outline:2px solid var(--earth);outline-offset:1px}
+.surfpin{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--warn);color:#2A1E05;border:2px solid var(--bg);box-sizing:border-box;cursor:pointer}
+.surfpin.lvl-beginner{background:#7FD1AE}
+.surfpin.lvl-advanced{background:#E06A6A}
+#lmap.placing{cursor:crosshair}
+.btn.small.on{background:var(--warn);color:#2A1E05;border-color:var(--warn)}
+.sfpop .leaflet-popup-content-wrapper,.sfpop .leaflet-popup-tip{background:var(--surface);color:var(--ink);box-shadow:none;border:1px solid var(--line)}
+.sfpop .leaflet-popup-content{margin:12px}
+.sfpop a.leaflet-popup-close-button{color:var(--muted)}
+.sfp{display:grid;gap:8px;font-family:var(--body);font-size:14px}
+.sfp p{margin:0}
+.sfp textarea{min-height:84px}
 .leaflet-container{font-family:var(--body);background:var(--ocean-soft)}
 .leaflet-bar a{background:var(--surface);color:var(--ink);border-bottom-color:var(--line)}
 .leaflet-bar a:hover{background:var(--line);color:var(--ink)}

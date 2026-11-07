@@ -1,0 +1,18 @@
+{
+"sf-trigg":{"name":"Trigg Point","wave":"reef","level":"intermediate","lat":-31.8760,"lon":115.7495,"note":"Right-hander over sand and rock, works for longboards and mid-lengths. Perth's most reliable mellow wave.","near":"Perth"},
+"sf-farm":{"name":"The Farm (Bunker Bay)","wave":"reef","level":"intermediate","lat":-33.5368,"lon":115.0205,"note":"Peaky lefts and rights in sheltered Bunker Bay. Fun in small to mid swell, can still hit hard.","near":"Yalingup"},
+"sf-yalli":{"name":"Yallingup Main Break","wave":"reef","level":"intermediate","lat":-33.6440,"lon":115.0258,"note":"Lefts and rights close to the beach, short paddle. Pick a small day, it gets heavy with size.","near":"Yalingup"},
+"sf-injidup":{"name":"Injidup Point","wave":"point","level":"intermediate","lat":-33.7345,"lon":114.9985,"note":"Right-hand point at the south end of Injidup beach. Best in south-east wind; Car Parks next to it is busier.","near":"Yalingup"},
+"sf-moses":{"name":"Moses Rock","wave":"reef","level":"intermediate","lat":-33.7625,"lon":114.9955,"note":"Gentle left-hander, one of the mellow options on the Capes. Best in straight west swell with easterly wind.","near":"Yalingup"},
+"sf-huzzas":{"name":"Huzzas (Gracetown)","wave":"point","level":"intermediate","lat":-33.8668,"lon":114.9885,"note":"Sheltered right in Cowaramup Bay, beginner to intermediate, great on a longboard. Often crowded.","near":"Margaret River"},
+"sf-southpoint":{"name":"South Point (Gracetown)","wave":"point","level":"intermediate","lat":-33.8698,"lon":114.9858,"note":"Right-hand point next to Huzzas. Works in south-west wind when other spots are blown out. Busy.","near":"Margaret River"},
+"sf-ellens":{"name":"Ellensbrook (Ulus, Noisies, Lefties)","wave":"reef","level":"intermediate","lat":-33.9105,"lon":114.9895,"note":"Relatively easy reef waves, short walk in. Avoid the Bombie and Umbies.","near":"Margaret River"},
+"sf-redgate":{"name":"Redgate","wave":"beach","level":"beginner","lat":-34.0365,"lon":115.0030,"note":"Easy, mellow beach break, sheltered when other spots are too big. Good family beach day.","near":"Margaret River"},
+"sf-ocean":{"name":"Ocean Beach (Denmark)","wave":"beach","level":"beginner","lat":-35.0330,"lon":117.3335,"note":"Beach break at the Wilson Inlet mouth, the local learner spot. Fun on a longboard on small days.","near":"Denmark"},
+"sf-middleton":{"name":"Middleton Beach (Albany)","wave":"beach","level":"beginner","lat":-35.0225,"lon":117.9135,"note":"Sheltered bay beach, small and gentle. Only works on bigger swells.","near":"Albany"},
+"sf-twilight":{"name":"Twilight Beach (Esperance)","wave":"beach","level":"intermediate","lat":-33.8835,"lon":121.8130,"note":"Mellow waves on a beautiful beach, beginner to intermediate.","near":"Esperance"},
+"sf-fourth":{"name":"Fourth Beach (Esperance)","wave":"beach","level":"beginner","lat":-33.8800,"lon":121.8265,"note":"Sandy bottom, gentle waves, suits longboards.","near":"Esperance"},
+"sf-ninemile":{"name":"Nine Mile Beach (Esperance)","wave":"reef","level":"intermediate","lat":-33.8540,"lon":121.7120,"note":"Mix of beach and reef, relaxed and uncrowded, good for longboards.","near":"Esperance"},
+"sf-drummond":{"name":"Drummond Cove (Geraldton)","wave":"beach","level":"intermediate","lat":-28.6765,"lon":114.6150,"note":"Wide A-frame, mushy in the middle; go left. Best with light winds.","near":"Geraldton"},
+"sf-coronation":{"name":"Coronation Beach","wave":"reef","level":"beginner","lat":-28.5535,"lon":114.5660,"note":"Reef-protected lagoon with a chest-high outer break on good autumn days. Windy in the afternoon.","near":"Geraldton"}
+}
