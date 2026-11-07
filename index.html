@@ -19,7 +19,7 @@
 :root{
   --bg:#0E1A20; --surface:#15252C; --ink:#E6F0F1; --muted:#9FB6BB; --line:#24363D;
   --ocean:#4FB3C2; --ocean-ink:#062027; --ocean-soft:#0F2A35; --earth:#F08A6C; --earth-ink:#2B0F06; --earth-soft:#3E2219; --warn:#E9B44C; --warn-soft:#33290F;
-  --sun:#F08A6C; --dune1:#123039; --dune2:#17414C; --dune3:#1F5764; --wave-face:#2C7A88; --tube-in:#0B2329; --foam:#DDEFF2;
+  --sun:#F08A6C; --dune1:#123039; --dune2:#17414C; --dune3:#1F5764;
   --display:"Fraunces", Georgia, "Times New Roman", serif;
   --body:"Nunito Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
   --mono:"Nunito Sans", system-ui, sans-serif;
@@ -33,11 +33,9 @@ h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;font-weight:600;l
 h1{font-size:clamp(32px,7vw,54px);line-height:1}
 h2{font-size:21px}
 .eyebrow{font-family:var(--display);font-style:italic;font-weight:500;font-size:15px;color:var(--earth)}
-.top{position:relative;overflow:hidden;background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:22px 20px 120px;display:grid;gap:12px}
+.top{position:relative;overflow:hidden;background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:22px 20px 92px;display:grid;gap:12px}
 .top>*{position:relative;z-index:1}
 .top .land{position:absolute;inset:auto 0 0 0;width:100%;height:110px;z-index:0}
-.top .tube{position:absolute;right:5%;bottom:0;height:190px;width:380px;max-width:60%;z-index:0}
-@media (max-width:860px){.top .tube{height:130px;width:260px;max-width:75%;right:2%}}
 .tagline{color:var(--muted);margin:0;max-width:52ch}
 .stats{display:flex;flex-wrap:wrap;gap:8px}
 .stat{background:var(--bg);border-radius:999px;padding:5px 13px}
@@ -175,7 +173,7 @@ select.who{width:auto;border-radius:999px;padding:3px 8px;font-size:12.5px;font-
 .empty{padding:28px 16px;text-align:center;color:var(--muted);border:1px dashed var(--line);border-radius:14px;font-style:italic}
 #toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:999px;font-size:13px;max-width:calc(100% - 32px)}
 .status{font-size:13px;color:var(--warn);background:var(--warn-soft);border-radius:12px;padding:8px 12px}
-@media (prefers-reduced-motion:no-preference){.stop{transition:border-color .15s}.tube .sun{transform:translateY(44px);opacity:0}.top.up .tube .sun{animation:rise 2.6s cubic-bezier(.2,.7,.2,1) .2s forwards}@keyframes rise{from{transform:translateY(44px);opacity:0}35%{opacity:.9}to{transform:none;opacity:.9}}}
+@media (prefers-reduced-motion:no-preference){.stop{transition:border-color .15s}.land .sun{transform:translateY(24px);opacity:.3}.top.up .land .sun{animation:rise 1.6s ease-out forwards}@keyframes rise{from{transform:translateY(24px);opacity:.3}to{transform:none;opacity:1}}}
 
 :root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 body{margin:0}
@@ -187,22 +185,10 @@ body{margin:0}
 <div class="wrap">
   <header class="top">
     <svg class="land" viewBox="0 0 400 110" preserveAspectRatio="none" aria-hidden="true">
-      <path d="M0 78 C70 66 130 74 200 72 C270 70 330 62 400 70 L400 110 L0 110Z" fill="var(--dune1)"/>
-      <path d="M0 88 C90 78 160 90 240 85 C310 81 360 85 400 83 L400 110 L0 110Z" fill="var(--dune2)"/>
-      <path d="M0 99 C100 95 200 98 300 96 C350 95 380 96 400 96 L400 110 L0 110Z" fill="var(--dune3)"/>
-    </svg>
-    <svg class="tube" viewBox="0 0 260 130" preserveAspectRatio="xMidYMax meet" aria-hidden="true">
-      <circle class="sun" cx="192" cy="40" r="28" fill="var(--sun)"/>
-      <path d="M0 130 L0 124 C30 122 50 112 62 104 C52 90 50 70 60 54 C72 34 98 22 124 22 C150 22 172 34 188 54 C206 80 232 110 260 124 L260 130Z" fill="var(--dune3)"/>
-      <path d="M152 106 C146 84 138 64 126 56 C142 52 162 60 178 74 C196 92 220 106 248 114 C220 115 186 112 152 106Z" fill="var(--wave-face)"/>
-      <path d="M70 104 C64 88 66 70 78 58 C90 46 112 44 126 56 C140 68 148 88 152 106Z" fill="var(--tube-in)"/>
-      <path d="M84 98 C80 86 82 74 90 66 M104 100 C100 88 102 76 110 68" fill="none" stroke="var(--dune2)" stroke-width="2" stroke-linecap="round" opacity=".7"/>
-      <path d="M60 54 C72 34 98 22 124 22 C150 22 172 34 188 54" fill="none" stroke="var(--foam)" stroke-width="3.2" stroke-linecap="round"/>
-      <path d="M60 54 C56 64 58 74 66 80" fill="none" stroke="var(--foam)" stroke-width="2.4" stroke-linecap="round" opacity=".8"/>
-      <g fill="var(--foam)">
-        <ellipse cx="60" cy="106" rx="16" ry="5" opacity=".9"/><ellipse cx="34" cy="110" rx="14" ry="4" opacity=".7"/><ellipse cx="84" cy="108" rx="10" ry="3.5" opacity=".7"/>
-        <circle cx="50" cy="46" r="2.2" opacity=".8"/><circle cx="44" cy="54" r="1.6" opacity=".6"/><circle cx="54" cy="38" r="1.4" opacity=".6"/><circle cx="196" cy="58" r="1.6" opacity=".5"/>
-      </g>
+      <circle class="sun" cx="318" cy="58" r="26" fill="var(--sun)" opacity=".85"/>
+      <path d="M0 70 C70 50 130 62 200 58 C270 54 330 40 400 56 L400 110 L0 110Z" fill="var(--dune1)"/>
+      <path d="M0 86 C90 66 160 84 240 76 C310 70 360 74 400 70 L400 110 L0 110Z" fill="var(--dune2)"/>
+      <path d="M0 100 C80 90 170 104 260 96 C330 90 370 98 400 94 L400 110 L0 110Z" fill="var(--dune3)"/>
     </svg>
     <div class="eyebrow">Our camper adventure · April–May 2027</div>
     <h1>Western Australia 2027</h1>
