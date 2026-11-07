@@ -1,5 +1,5 @@
 // Offline support: app files and libraries are cached; map tiles you have viewed stay available offline.
-const APP = "wa-app-v2", TILES = "wa-tiles", MAX_TILES = 4000;
+const APP = "wa-app-v3", TILES = "wa-tiles", MAX_TILES = 4000;
 const SHELL = ["./", "./index.html", "./app.js", "./config.js", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png", "./seed.json"];
 self.addEventListener("install", e => { e.waitUntil(caches.open(APP).then(c => c.addAll(SHELL)).then(() => self.skipWaiting())); });
 self.addEventListener("activate", e => {

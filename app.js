@@ -189,7 +189,7 @@ function renderRoute(){
       </button>${S.open===s.id?stopEditor(s):""}</li>`;
   });
   const after=S.stops.map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join("");
-  app.innerHTML=`<div class="route">
+  app.innerHTML=`<div class="route trip">
     <div class="mapbox"><div id="mapslot"></div><div class="maplegend"><span><i class="dot" style="background:var(--earth)"></i>Overnight</span><span><i class="dot" style="border:2px solid var(--ocean)"></i>Day stop</span><span>Solid line: road route · dashed: still loading</span><button class="btn ghost small" data-act="fitall">Whole trip</button></div></div>
     <div>
       <div class="section-h"><h2>Stops &amp; drives</h2><span class="note">${c.days} days · road km, ≈ = estimate</span></div>
