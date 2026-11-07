@@ -154,15 +154,18 @@ function drawMap(){
   const groups=new Map();
   S.stops.forEach((s,i)=>{if(!hasXY(s))return;const k=s.lat.toFixed(3)+","+s.lon.toFixed(3);if(!groups.has(k))groups.set(k,[]);groups.get(k).push({s,num:i+1})});
   groups.forEach(list=>{
-    const sel=list.some(x=>x.s.id===S.open),main=list.find(x=>x.s.id===S.open)||list[0],s=main.s;
-    const base=list.some(x=>(Number(x.s.nights)||0)>0&&x.s.kind!=="optional"),opt=list.every(x=>x.s.kind==="optional");
-    const label=list.map(x=>x.num).join(" · ");
-    const w=Math.max(26,12+label.length*7.5);
-    const m=L.marker([s.lat,s.lon],{zIndexOffset:sel?1000:0,keyboard:true,title:list.map(x=>`${x.num}. ${x.s.name}`).join(", "),
-      icon:L.divIcon({className:"",iconSize:[w,26],iconAnchor:[w/2,13],
-        html:`<div class="num ${base?"base":"day"}${sel?" sel":""}${opt?" opt":""}">${label}</div>`})}).addTo(LAYER);
-    m.bindTooltip(list.map(x=>{const n=Number(x.s.nights)||0;return `${x.num}. ${esc(x.s.name)}${n?` · ${n} night${n>1?"s":""}`:""}`}).join("<br>"),{direction:"right",offset:[w/2,0],permanent:sel,className:"tip"});
-    m.on("click",()=>pickStop(main.s.id))});
+    const k=list.length,gap=4;
+    const ws=list.map(x=>Math.max(26,12+String(x.num).length*7.5));
+    const total=ws.reduce((p,q)=>p+q,0)+gap*(k-1);let left=-total/2;
+    list.forEach((x,j)=>{const s=x.s,w=ws[j],sel=s.id===S.open,n=Number(s.nights)||0;
+      const base=n>0&&s.kind!=="optional"&&s.kind!=="day",opt=s.kind==="optional";
+      const ax=-left;left+=w+gap;
+      const m=L.marker([s.lat,s.lon],{zIndexOffset:sel?1000:0,keyboard:true,title:`${x.num}. ${s.name}`,
+        icon:L.divIcon({className:"",iconSize:[w,26],iconAnchor:[ax,13],
+          html:`<div class="num ${base?"base":"day"}${sel?" sel":""}${opt?" opt":""}">${x.num}</div>`})}).addTo(LAYER);
+      m.bindTooltip(`${x.num}. ${esc(s.name)}${n?` \u00b7 ${n} night${n>1?"s":""}`:""}`,{direction:"right",offset:[w-ax+2,0],permanent:sel,className:"tip"});
+      m.on("click",()=>pickStop(s.id))});
+  });
 }
 function pickStop(id){S.open=id;S.confirm=null;render();const li=app.querySelector(`.stop[data-id="${id}"]`);li&&li.scrollIntoView({block:"nearest",behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth"})}
 function simplify(pts,tol){if(pts.length<3)return pts;const keep=new Uint8Array(pts.length);keep[0]=keep[pts.length-1]=1;const st=[[0,pts.length-1]];
