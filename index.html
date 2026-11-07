@@ -35,6 +35,8 @@ h2{font-size:21px}
 .eyebrow{font-family:var(--display);font-style:italic;font-weight:500;font-size:15px;color:var(--earth)}
 .top{position:relative;overflow:hidden;background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:22px 20px 92px;display:grid;gap:12px}
 .top>*{position:relative;z-index:1}
+.top .sun{position:absolute;right:17%;bottom:86px;width:58px;height:58px;border-radius:50%;background:var(--sun);opacity:.9;z-index:0}
+@media (max-width:600px){.top .sun{right:6%;bottom:60px;width:42px;height:42px}}
 .top .land{position:absolute;inset:auto 0 0 0;width:100%;height:110px;z-index:0}
 .tagline{color:var(--muted);margin:0;max-width:52ch}
 .stats{display:flex;flex-wrap:wrap;gap:8px}
@@ -173,7 +175,7 @@ select.who{width:auto;border-radius:999px;padding:3px 8px;font-size:12.5px;font-
 .empty{padding:28px 16px;text-align:center;color:var(--muted);border:1px dashed var(--line);border-radius:14px;font-style:italic}
 #toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:999px;font-size:13px;max-width:calc(100% - 32px)}
 .status{font-size:13px;color:var(--warn);background:var(--warn-soft);border-radius:12px;padding:8px 12px}
-@media (prefers-reduced-motion:no-preference){.stop{transition:border-color .15s}.land .sun{transform:translateY(24px);opacity:.3}.top.up .land .sun{animation:rise 1.6s ease-out forwards}@keyframes rise{from{transform:translateY(24px);opacity:.3}to{transform:none;opacity:1}}}
+@media (prefers-reduced-motion:no-preference){.stop{transition:border-color .15s}.top .sun{transform:translateY(100px);opacity:.4}.top.up .sun{animation:rise 2.8s cubic-bezier(.25,.6,.3,1) .2s forwards}@keyframes rise{from{transform:translateY(100px);opacity:.4}to{transform:none;opacity:.9}}}
 
 :root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 body{margin:0}
@@ -184,8 +186,8 @@ body{margin:0}
 
 <div class="wrap">
   <header class="top">
+    <div class="sun" aria-hidden="true"></div>
     <svg class="land" viewBox="0 0 400 110" preserveAspectRatio="none" aria-hidden="true">
-      <circle class="sun" cx="318" cy="58" r="26" fill="var(--sun)" opacity=".85"/>
       <path d="M0 70 C70 50 130 62 200 58 C270 54 330 40 400 56 L400 110 L0 110Z" fill="var(--dune1)"/>
       <path d="M0 86 C90 66 160 84 240 76 C310 70 360 74 400 70 L400 110 L0 110Z" fill="var(--dune2)"/>
       <path d="M0 100 C80 90 170 104 260 96 C330 90 370 98 400 94 L400 110 L0 110Z" fill="var(--dune3)"/>
