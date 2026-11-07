@@ -116,17 +116,37 @@ function mountMap(){
 }
 function fitAll(){const pts=S.stops.filter(hasXY).map(s=>[s.lat,s.lon]);if(MAP&&pts.length)MAP.fitBounds(pts,{padding:[24,24]})}
 const legOk=(p,s)=>s.route&&s.route.for===p.id&&s.route.from===`${p.lat},${p.lon}`&&s.route.to===`${s.lat},${s.lon}`;
+function legArrows(pts,earth){
+  const cl=Math.cos(pts[0][0]*Math.PI/180),seg=[];let tot=0;
+  for(let i=1;i<pts.length;i++){const dx=(pts[i][1]-pts[i-1][1])*cl,dy=pts[i][0]-pts[i-1][0],d=Math.hypot(dx,dy);seg.push(d);tot+=d}
+  if(!tot)return;
+  const n=tot>2.5?3:tot>0.9?2:1;
+  for(let k=1;k<=n;k++){let want=tot*k/(n+1),i=0;while(i<seg.length-1&&want>seg[i]){want-=seg[i];i++}
+    const a=pts[i],b=pts[i+1],t=seg[i]?want/seg[i]:0,lat=a[0]+(b[0]-a[0])*t,lon=a[1]+(b[1]-a[1])*t;
+    const ang=Math.atan2((b[1]-a[1])*cl,b[0]-a[0])*180/Math.PI;
+    L.marker([lat,lon],{interactive:false,keyboard:false,icon:L.divIcon({className:"arw",iconSize:[22,22],iconAnchor:[11,11],
+      html:`<svg viewBox="0 0 18 18" width="22" height="22" style="transform:rotate(${ang.toFixed(0)}deg)"><path d="M9 2 L15 14 L9 11 L3 14 Z" fill="${earth}" stroke="${tok("--surface")}" stroke-width="1.5" stroke-linejoin="round"/></svg>`})}).addTo(LAYER)}
+}
 function drawMap(){
   if(!MAP)return;LAYER.clearLayers();
   const earth=tok("--earth"),ocean=tok("--ocean"),surf=tok("--surface");
   S.stops.forEach((s,i)=>{const p=S.stops[i-1];if(!p||!hasXY(p)||!hasXY(s))return;
-    if(legOk(p,s))L.polyline(s.route.c,{color:earth,weight:4,opacity:.85,lineJoin:"round"}).addTo(LAYER);
-    else L.polyline([[p.lat,p.lon],[s.lat,s.lon]],{color:earth,weight:2,opacity:.7,dashArray:"6 8"}).addTo(LAYER)});
-  S.stops.filter(hasXY).forEach(s=>{
-    const sel=s.id===S.open,n=Number(s.nights)||0,base=n>0&&s.kind!=="optional";
-    const m=L.circleMarker([s.lat,s.lon],{radius:sel?11:base?7:5,fillColor:base?earth:surf,color:base?surf:ocean,weight:sel?4:2,fillOpacity:1,dashArray:s.kind==="optional"?"3 3":null}).addTo(LAYER);
-    m.bindTooltip(`${esc(s.name)}${n?` · ${n} night${n>1?"s":""}`:""}`,{direction:"right",offset:[10,0],permanent:sel,className:"tip"});
-    m.on("click",()=>pickStop(s.id))});
+    const pts=legOk(p,s)?s.route.c:[[p.lat,p.lon],[s.lat,s.lon]];
+    if(legOk(p,s))L.polyline(pts,{color:earth,weight:4,opacity:.85,lineJoin:"round"}).addTo(LAYER);
+    else L.polyline(pts,{color:earth,weight:2,opacity:.7,dashArray:"6 8"}).addTo(LAYER);
+    legArrows(pts,earth)});
+  const groups=new Map();
+  S.stops.forEach((s,i)=>{if(!hasXY(s))return;const k=s.lat.toFixed(3)+","+s.lon.toFixed(3);if(!groups.has(k))groups.set(k,[]);groups.get(k).push({s,num:i+1})});
+  groups.forEach(list=>{
+    const sel=list.some(x=>x.s.id===S.open),main=list.find(x=>x.s.id===S.open)||list[0],s=main.s;
+    const base=list.some(x=>(Number(x.s.nights)||0)>0&&x.s.kind!=="optional"),opt=list.every(x=>x.s.kind==="optional");
+    const label=list.map(x=>x.num).join(" · ");
+    const w=Math.max(26,12+label.length*7.5);
+    const m=L.marker([s.lat,s.lon],{zIndexOffset:sel?1000:0,keyboard:true,title:list.map(x=>`${x.num}. ${x.s.name}`).join(", "),
+      icon:L.divIcon({className:"",iconSize:[w,26],iconAnchor:[w/2,13],
+        html:`<div class="num ${base?"base":"day"}${sel?" sel":""}${opt?" opt":""}">${label}</div>`})}).addTo(LAYER);
+    m.bindTooltip(list.map(x=>{const n=Number(x.s.nights)||0;return `${x.num}. ${esc(x.s.name)}${n?` · ${n} night${n>1?"s":""}`:""}`}).join("<br>"),{direction:"right",offset:[w/2,0],permanent:sel,className:"tip"});
+    m.on("click",()=>pickStop(main.s.id))});
 }
 function pickStop(id){S.open=id;S.confirm=null;render();const li=app.querySelector(`.stop[data-id="${id}"]`);li&&li.scrollIntoView({block:"nearest",behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth"})}
 function simplify(pts,tol){if(pts.length<3)return pts;const keep=new Uint8Array(pts.length);keep[0]=keep[pts.length-1]=1;const st=[[0,pts.length-1]];
@@ -184,13 +204,13 @@ function renderRoute(){
     items+=`<li class="stop ${S.open===s.id?"sel":""}" data-id="${s.id}">
       <button class="stop-head" data-act="toggle" aria-expanded="${S.open===s.id}">
         <span class="daybox"><b>Day ${s._day}</b>${d||"&nbsp;"}</span>
-        <span class="sname">${esc(s.name)}</span>${chip}
+        <span class="sname"><span class="snum">${i+1}</span>${esc(s.name)}</span>${chip}
         <span class="ssub">${h.length?esc(h.map(x=>x.n).join(" · ")):(esc(s.notes)||"No highlights yet")}</span>
       </button>${S.open===s.id?stopEditor(s):""}</li>`;
   });
   const after=S.stops.map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join("");
   app.innerHTML=`<div class="route trip">
-    <div class="mapbox"><div id="mapslot"></div><div class="maplegend"><span><i class="dot" style="background:var(--earth)"></i>Overnight</span><span><i class="dot" style="border:2px solid var(--ocean)"></i>Day stop</span><span>Solid line: road route · dashed: still loading</span><button class="btn ghost small" data-act="fitall">Whole trip</button></div></div>
+    <div class="mapbox"><div id="mapslot"></div><div class="maplegend"><span><i class="dot" style="background:var(--earth)"></i>Overnight</span><span><i class="dot" style="border:2px solid var(--ocean)"></i>Day stop</span><span>Numbers follow the route · arrows show the direction</span><button class="btn ghost small" data-act="fitall">Whole trip</button></div></div>
     <div>
       <div class="section-h"><h2>Stops &amp; drives</h2><span class="note">${c.days} days · road km, ≈ = estimate</span></div>
       ${S.stops.length?`<ul class="log">${items}</ul>`:(Store.user&&Store.member&&!S.ro?`<div class="empty">No stops yet. <button class="btn" data-act="importseed">Load our saved route (25 stops)</button></div>`:`<div class="empty">${Store.user?"No stops yet. Add your arrival city below.":"Sign in at the top to load your trip."}</div>`)}
