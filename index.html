@@ -4,7 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Western Australia 2027</title>
-<meta name="theme-color" content="#F2E8D7">
+<meta name="theme-color" content="#0E1A20">
+<meta name="color-scheme" content="dark">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
@@ -14,23 +15,16 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght,SOFT@0,9..144,600,100;1,9..144,500,100&family=Nunito+Sans:opsz,wght@6..12,400;6..12,700&display=swap">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
-/* Layout: travel-journal app; sunset hero, route map left (sticky), stop cards right; one column on phones */
+/* Layout: travel-journal app; ocean-at-night header, full-width route map, stop list below. Single dark theme ("Indian Ocean night"). */
 :root{
-  --bg:#F2E8D7; --surface:#FBF6EC; --ink:#2F2519; --muted:#7A6A55; --line:#E3D5BD;
-  --ocean:#2E6E70; --ocean-soft:#DCE5DC; --earth:#C0612A; --earth-soft:#F6DFCB; --warn:#9A5B00; --warn-soft:#F7E6C4;
-  --land:#E8D5B0; --coast:#C9A878; --sun:#E9A23B; --dune1:#E7C79C; --dune2:#D79A62; --dune3:#B8693A;
+  --bg:#0E1A20; --surface:#15252C; --ink:#E6F0F1; --muted:#9FB6BB; --line:#24363D;
+  --ocean:#4FB3C2; --ocean-ink:#062027; --ocean-soft:#0F2A35; --earth:#F08A6C; --earth-ink:#2B0F06; --earth-soft:#3E2219; --warn:#E9B44C; --warn-soft:#33290F;
+  --sun:#F08A6C; --dune1:#123039; --dune2:#17414C; --dune3:#1F5764;
   --display:"Fraunces", Georgia, "Times New Roman", serif;
   --body:"Nunito Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
   --mono:"Nunito Sans", system-ui, sans-serif;
+  color-scheme:dark;
 }
-@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
-  --bg:#1D1812; --surface:#28211A; --ink:#F2E7D4; --muted:#B6A48B; --line:#3E342A;
-  --ocean:#86BDB3; --ocean-soft:#22302C; --earth:#EC9660; --earth-soft:#3D2618; --warn:#E9B44C; --warn-soft:#3A2C14;
-  --land:#3B3024; --coast:#6A5440; --sun:#E9A23B; --dune1:#5A4430; --dune2:#7A4E2E; --dune3:#9C5A30; color-scheme:dark}}
-:root[data-theme="dark"]{
-  --bg:#1D1812; --surface:#28211A; --ink:#F2E7D4; --muted:#B6A48B; --line:#3E342A;
-  --ocean:#86BDB3; --ocean-soft:#22302C; --earth:#EC9660; --earth-soft:#3D2618; --warn:#E9B44C; --warn-soft:#3A2C14;
-  --land:#3B3024; --coast:#6A5440; --sun:#E9A23B; --dune1:#5A4430; --dune2:#7A4E2E; --dune3:#9C5A30; color-scheme:dark}
 *{box-sizing:border-box}
 body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15.5px;line-height:1.55;font-variant-numeric:tabular-nums;
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:16px 48px}
@@ -50,12 +44,12 @@ h2{font-size:21px}
 .start{display:flex;gap:8px;align-items:center;font-size:13.5px;color:var(--muted)}
 nav.tabs{display:flex;gap:6px;overflow-x:auto}
 nav.tabs button{font:inherit;font-weight:700;background:transparent;border:1px solid var(--line);border-radius:999px;color:var(--muted);padding:8px 18px;cursor:pointer}
-nav.tabs button[aria-current="true"]{color:var(--surface);background:var(--ink);border-color:var(--ink)}
+nav.tabs button[aria-current="true"]{color:var(--ocean-ink);background:var(--ocean);border-color:var(--ocean)}
 input,select,textarea{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:7px 10px;min-width:0;width:100%}
 textarea{min-height:64px;resize:vertical}
 input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-visible,a:focus-visible{outline:2px solid var(--earth);outline-offset:2px}
 button{font:inherit;cursor:pointer}
-.btn{background:var(--earth);color:var(--surface);border:0;border-radius:999px;padding:8px 16px;font-weight:700;white-space:nowrap;text-decoration:none;display:inline-block}
+.btn{background:var(--earth);color:var(--earth-ink);border:0;border-radius:999px;padding:8px 16px;font-weight:700;white-space:nowrap;text-decoration:none;display:inline-block}
 .btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
 .btn.danger{background:var(--earth)}
 .btn:disabled{opacity:.5;cursor:default}
@@ -65,17 +59,20 @@ button{font:inherit;cursor:pointer}
 .mapbox{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:10px}
 #lmap{height:clamp(420px,48vw,560px);border-radius:10px;background:var(--ocean-soft);z-index:0}
 @media (max-width:859px){#lmap{height:62vh}}
-.leaflet-tile-pane{filter:sepia(.28) saturate(.85) brightness(1.02)}
-:root[data-theme="dark"] .leaflet-tile-pane{filter:sepia(.3) brightness(.75) contrast(1.05)}
-@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .leaflet-tile-pane{filter:sepia(.3) brightness(.75) contrast(1.05)}}
-.leaflet-container{font-family:var(--body)}
+.leaflet-tile-pane{filter:invert(1) hue-rotate(185deg) brightness(.92) contrast(.88) saturate(.55)}
+.leaflet-container{font-family:var(--body);background:var(--ocean-soft)}
+.leaflet-bar a{background:var(--surface);color:var(--ink);border-bottom-color:var(--line)}
+.leaflet-bar a:hover{background:var(--line);color:var(--ink)}
+.leaflet-bar{border:1px solid var(--line)!important}
+.leaflet-control-attribution{background:rgba(14,26,32,.8)!important;color:var(--muted)}
+.leaflet-control-attribution a{color:var(--ocean)}
 .num{display:flex;align-items:center;justify-content:center;height:26px;border-radius:999px;font-family:var(--body);font-weight:700;font-size:12.5px;line-height:1;white-space:nowrap;border:2px solid var(--surface);box-sizing:border-box;cursor:pointer}
-.num.base{background:var(--earth);color:var(--surface)}
+.num.base{background:var(--earth);color:var(--earth-ink)}
 .num.day{background:var(--surface);color:var(--ocean);border-color:var(--ocean)}
 .num.opt{border-style:dashed}
 .num.sel{outline:3px solid var(--ink);outline-offset:1px}
 .arw{pointer-events:none}
-.snum{display:inline-flex;align-items:center;justify-content:center;min-width:24px;height:24px;padding:0 6px;margin-right:8px;border-radius:999px;background:var(--earth);color:var(--surface);font-family:var(--body);font-size:12.5px;font-weight:700;vertical-align:3px}
+.snum{display:inline-flex;align-items:center;justify-content:center;min-width:24px;height:24px;padding:0 6px;margin-right:8px;border-radius:999px;background:var(--earth);color:var(--earth-ink);font-family:var(--body);font-size:12.5px;font-weight:700;vertical-align:3px}
 .tip{font-family:var(--body);font-weight:700;border-radius:999px;padding:3px 10px;background:var(--surface);color:var(--ink);border:1px solid var(--line);box-shadow:none}
 .tip::before{display:none}
 .btn.small{padding:4px 12px;font-size:13px;margin-left:auto}
@@ -125,8 +122,8 @@ label.f{display:grid;gap:4px;font-size:12.5px;color:var(--muted)}
 .pack input[type=checkbox]{width:20px;height:20px;accent-color:var(--earth)}
 .fchip{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:6px 14px;font-weight:700}
 .fchip span{font-weight:400;color:var(--muted);margin-left:4px;font-size:12.5px}
-.fchip.on{background:var(--ink);color:var(--surface);border-color:var(--ink)}
-.fchip.on span{color:var(--surface);opacity:.75}
+.fchip.on{background:var(--ocean);color:var(--ocean-ink);border-color:var(--ocean)}
+.fchip.on span{color:var(--ocean-ink);opacity:.75}
 select.who{width:auto;border-radius:999px;padding:3px 8px;font-size:12.5px;font-weight:700;border-color:transparent}
 .who-Isabel:not(.fchip){background:var(--ocean-soft);color:var(--ocean)}
 .who-Colin:not(.fchip){background:var(--earth-soft);color:var(--earth)}
