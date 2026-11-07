@@ -201,7 +201,7 @@ function stopEditor(s){
     <div class="row"><select id="hk-new" style="width:120px" ${dis} aria-label="New highlight type">${KINDS.map(k=>`<option>${k}</option>`).join("")}</select><input id="hn-new" placeholder="Add a highlight, surf spot, campsite…" style="flex:1;width:auto" ${dis}><button class="btn" data-act="hadd" ${dis}>Add</button></div>
     <label class="f">Notes<textarea id="no-${s.id}" data-f="notes" ${dis}>${esc(s.notes)}</textarea></label>
     <div class="row">
-      <button class="btn ghost" data-act="up" ${dis}>Move up</button><button class="btn ghost" data-act="down" ${dis}>Move down</button>
+      <button class="btn" data-act="stopsave">Save</button><button class="btn ghost" data-act="up" ${dis}>Move up</button><button class="btn ghost" data-act="down" ${dis}>Move down</button>
       <button class="btn ghost" data-act="del" style="color:var(--earth)" ${dis}>Delete stop</button></div>
     ${conf}</div>`;
 }
@@ -306,11 +306,14 @@ const editing=()=>{const a=document.activeElement;return a&&app.contains(a)&&/IN
 function schedule(){if(editing()){S.pending=true}else render()}
 app.addEventListener("focusout",()=>setTimeout(()=>{if(S.pending&&!editing()){S.pending=false;render()}},0));
 const cur=()=>S.stops.find(s=>s.id===S.open);
+const commitEdits=()=>{const x=document.activeElement;if(x&&app.contains(x)&&/INPUT|TEXTAREA|SELECT/.test(x.tagName))x.blur()};
 function parseXY(t){const m=String(t||"").match(/(-?\d{1,2}\.\d+)\s*,\s*(-?\d{1,3}\.\d+)/);if(!m)return null;const lat=+m[1],lon=+m[2];return Math.abs(lat)<=90&&Math.abs(lon)<=180?{lat,lon}:null}
 
 document.addEventListener("click",async e=>{
   const el=e.target.closest("[data-act]");if(!el)return;const a=el.dataset.act;
   if(a==="tab"){S.tab=el.dataset.tab;try{history.replaceState(null,"","#"+S.tab)}catch(_){location.hash=S.tab}render();return}
+  if(a==="stopsave"){commitEdits();S.open=null;S.confirm=null;render();toast("Saved");return}
+  if(a==="toggle")commitEdits();
   if(a==="toggle"||a==="pick"){const id=el.closest("[data-id]").dataset.id;S.open=S.open===id&&a==="toggle"?null:id;S.confirm=null;if(a==="pick"&&S.tab!=="route"){S.tab="route"}render();if(a==="toggle"&&S.open&&MAP){const st=cur();if(st&&hasXY(st))MAP.panTo([st.lat,st.lon])}
     if(a==="pick"){const li=app.querySelector(`.stop[data-id="${id}"]`);li&&li.scrollIntoView({block:"nearest",behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth"})}return}
   const s=cur();
@@ -507,7 +510,7 @@ function surfCard(sp){
       <label class="f">Coordinates<input id="sfc-${sp.id}" data-sf="coords" value="${typeof sp.lat==="number"?sp.lat+", "+sp.lon:""}" placeholder="-33.87, 114.99" ${dis}></label>
     </div>
     <label class="f">Notes<textarea id="sfno-${sp.id}" data-sf="note" placeholder="Best swell, wind, tide, parking…" ${dis}>${esc(sp.note)}</textarea></label>
-    <div class="row"><button class="btn ghost" data-act="sfshow">Show on map</button><button class="btn ghost" data-act="sfctrip" ${dis}>Add to trip</button><button class="btn ghost" data-act="sfcdel" style="color:var(--earth)" ${dis}>Delete spot</button></div>
+    <div class="row"><button class="btn" data-act="sfcsave">Save</button><button class="btn ghost" data-act="sfshow">Show on map</button><button class="btn ghost" data-act="sfctrip" ${dis}>Add to trip</button><button class="btn ghost" data-act="sfcdel" style="color:var(--earth)" ${dis}>Delete spot</button></div>
     ${conf}</div></li>`;
 }
 function renderSurf(){
@@ -553,6 +556,8 @@ document.addEventListener("click",async e=>{
   if(a==="sfwave"){S.sfWave=el.dataset.v;render();return}
   if(a==="sffit"){fitSurf();return}
   const li=el.closest("li[data-sid]");if(!li)return;const id=li.dataset.sid,sp=S.surf.find(x=>x.id===id);if(!sp)return;
+  if(a==="sfcsave"){commitEdits();S.sfOpen=null;S.sfConfirm=null;render();toast("Saved");return}
+  if(a==="sftoggle")commitEdits();
   if(a==="sftoggle"){S.sfOpen=S.sfOpen===id?null:id;S.sfConfirm=null;render();if(S.sfOpen&&MAP&&typeof sp.lat==="number")MAP.panTo([sp.lat,sp.lon]);return}
   if(a==="sfshow"){openSpotOnMap(id);return}
   if(a==="sfcdel"){S.sfConfirm=id;render();return}
