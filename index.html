@@ -68,6 +68,12 @@ button{font:inherit;cursor:pointer}
 .leaflet-control-layers-base input:checked+span{background:var(--ocean);color:var(--ocean-ink);border-radius:999px}
 .leaflet-control-layers-base input:checked+span span{color:var(--ocean-ink)}
 .leaflet-control-layers-base input:focus-visible+span{outline:2px solid var(--earth);outline-offset:1px}
+.leaflet-top.leaflet-right{display:flex;flex-direction:row-reverse;align-items:flex-start;gap:8px;margin-right:10px}
+.leaflet-top.leaflet-right .leaflet-control{margin:10px 0 0 0;float:none;clear:none}
+.surftoggle{display:flex;align-items:center;gap:6px;height:36px;padding:0 14px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--muted);font:inherit;font-weight:700;font-size:12.5px;cursor:pointer}
+.surftoggle.on{background:var(--warn);border-color:var(--warn);color:#2A1E05}
+.surftoggle:focus-visible{outline:2px solid var(--earth);outline-offset:2px}
+.leaflet-control-layers{height:36px;display:flex;align-items:center}
 .leaflet-control-layers-list{display:flex;flex-wrap:wrap;gap:2px;align-items:center}
 .leaflet-control-layers-separator{display:none}
 .leaflet-control-layers-overlays{display:flex}

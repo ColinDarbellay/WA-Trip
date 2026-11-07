@@ -215,7 +215,7 @@ function renderRoute(){
     if(i>0){const L=c.legs[i],km=L?L.km:null,a=L&&!L.real?"≈ ":"";
       items+= L?`<li class="leg">${a}${km} km · ${a}${fmtMin(L.min)}${L.real?"":" (estimate)"}${km>400?' <span class="long">Long drive day</span>':""}${hasXY(p)&&hasXY(s)?` · <a href="${mapsLink(p,s)}" target="_blank" rel="noopener">Directions</a>`:""}</li>`:`<li class="leg">Add coordinates to see the distance</li>`}
     const n=Number(s.nights)||0,h=s.highlights||[];
-    const chip=s.kind==="optional"?`<span class="chip opt">optional</span>`:n?`<span class="chip ${s.nightsGuess?"guess":""}">${n} night${n>1?"s":""}</span>`:`<span class="chip day">day stop</span>`;
+    const chip=s.kind==="optional"?`<span class="chip opt">optional</span>`:(n&&s.kind!=="day")?`<span class="chip ${s.nightsGuess?"guess":""}">${n} night${n>1?"s":""}</span>`:`<span class="chip day">day stop</span>`;
     const d=dateOf(s._day);
     items+=`<li class="stop ${S.open===s.id?"sel":""}" data-id="${s.id}">
       <button class="stop-head" data-act="toggle" aria-expanded="${S.open===s.id}">
@@ -302,7 +302,7 @@ function render(){
   if(!S.got.stops){return}
   ({route:renderRoute,budget:renderBudget,packing:renderPacking})[S.tab]();
 }
-const editing=()=>{const a=document.activeElement;return a&&app.contains(a)&&/INPUT|TEXTAREA|SELECT/.test(a.tagName)&&a.type!=="checkbox"};
+const editing=()=>{const a=document.activeElement;return a&&app.contains(a)&&/INPUT|TEXTAREA/.test(a.tagName)&&a.type!=="checkbox"};
 function schedule(){if(editing()){S.pending=true}else render()}
 app.addEventListener("focusout",()=>setTimeout(()=>{if(S.pending&&!editing()){S.pending=false;render()}},0));
 const cur=()=>S.stops.find(s=>s.id===S.open);
@@ -339,7 +339,12 @@ document.addEventListener("change",async e=>{
   const s=cur();if(!s)return;
   if(f==="hk"||f==="hn"){const h=(s.highlights||[]).map(x=>({...x}));const i=+el.dataset.i;if(!h[i])return;h[i][f==="hk"?"k":"n"]=el.value;await w("stops/"+s.id,{highlights:h});return}
   if(f==="coords"){const xy=parseXY(el.value);if(!xy){toast("Use the format -33.95, 115.07");return}await w("stops/"+s.id,{...xy,roadFor:""});return}
-  if(f==="nights"){await w("stops/"+s.id,{nights:Math.max(0,Number(el.value)||0),nightsGuess:false});return}
+  if(f==="nights"){const n=Math.max(0,Number(el.value)||0),u={nights:n,nightsGuess:false};
+    if(n>0&&s.kind==="day")u.kind="base";if(n===0&&s.kind==="base")u.kind="day";
+    await w("stops/"+s.id,u);return}
+  if(f==="kind"){const v=el.value,n=Number(s.nights)||0,u={kind:v};
+    if(v==="day")u.nights=0;if(v==="base"&&!n){u.nights=1;u.nightsGuess=false}
+    await w("stops/"+s.id,u);return}
   if(f==="name"&&!el.value.trim()){toast("A stop needs a name");return}
   await w("stops/"+s.id,{[f]:el.value});
 });
@@ -392,9 +397,13 @@ function setupSurf(ctrl){
   SURF=L.layerGroup();
   let on=true;try{on=localStorage.getItem("wa-surf")!=="off"}catch(_){}
   if(on)SURF.addTo(MAP);
-  ctrl.addOverlay(SURF,"Surf spots");
-  MAP.on("overlayadd",e=>{if(e.layer===SURF){try{localStorage.setItem("wa-surf","on")}catch(_){}}});
-  MAP.on("overlayremove",e=>{if(e.layer===SURF){try{localStorage.setItem("wa-surf","off")}catch(_){}}});
+  const SurfCtl=L.Control.extend({options:{position:"topright"},onAdd(){
+    const b=L.DomUtil.create("button","surftoggle");b.type="button";
+    const sync=()=>{const on=MAP.hasLayer(SURF);b.classList.toggle("on",on);b.setAttribute("aria-pressed",on);b.innerHTML=`${WAVE_SVG}<span>Surf spots</span>`};
+    L.DomEvent.disableClickPropagation(b);
+    b.addEventListener("click",()=>{const on=!MAP.hasLayer(SURF);on?SURF.addTo(MAP):MAP.removeLayer(SURF);try{localStorage.setItem("wa-surf",on?"on":"off")}catch(_){}sync()});
+    MAP.on("layeradd layerremove",e=>{if(e.layer===SURF)sync()});sync();return b}});
+  new SurfCtl().addTo(MAP);
   MAP.on("contextmenu",e=>addSpotAt(e.latlng));
   MAP.on("click",e=>{if(S.surfMode){S.surfMode=false;mapEl.classList.remove("placing");updateSurfBtn();addSpotAt(e.latlng)}});
   let t=null,start=null;
