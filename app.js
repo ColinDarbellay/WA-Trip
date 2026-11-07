@@ -188,7 +188,7 @@ async function fetchRoutes(){
 function stopEditor(s){
   const dis=S.ro?"disabled":"";
   const hl=(s.highlights||[]).map((h,i)=>`<li><select data-f="hk" data-i="${i}" ${dis} aria-label="Type">${KINDS.map(k=>`<option ${k===h.k?"selected":""}>${k}</option>`).join("")}</select><input data-f="hn" data-i="${i}" value="${esc(h.n)}" ${dis} aria-label="Highlight name"><button class="x" data-act="hdel" data-i="${i}" ${dis} aria-label="Remove ${esc(h.n)}">✕</button></li>`).join("");
-  const conf=S.confirm===s.id?`<div class="confirm">Delete ${esc(s.name)} and its highlights? <button class="btn danger" data-act="delyes">Delete</button><button class="btn ghost" data-act="delno">Keep</button></div>`:"";
+  const conf=S.confirm===s.id?`<div class="confirm actbar">Really delete ${esc(s.name)} and its highlights? <button class="btn danger" data-act="delyes">Delete</button><button class="btn ghost" data-act="delno">Keep</button></div>`:"";
   return `<div class="ed">
     <div class="grid2">
       <label class="f">Name<input id="n-${s.id}" data-f="name" value="${esc(s.name)}" ${dis}></label>
@@ -200,10 +200,8 @@ function stopEditor(s){
     <div><div class="eyebrow" style="margin-bottom:6px">Highlights &amp; spots</div><ul class="hl">${hl||'<li class="note" style="display:block">No highlights yet.</li>'}</ul></div>
     <div class="row"><select id="hk-new" style="width:120px" ${dis} aria-label="New highlight type">${KINDS.map(k=>`<option>${k}</option>`).join("")}</select><input id="hn-new" placeholder="Add a highlight, surf spot, campsite…" style="flex:1;width:auto" ${dis}><button class="btn" data-act="hadd" ${dis}>Add</button></div>
     <label class="f">Notes<textarea id="no-${s.id}" data-f="notes" ${dis}>${esc(s.notes)}</textarea></label>
-    <div class="row">
-      <button class="btn" data-act="stopsave">Save</button><button class="btn ghost" data-act="up" ${dis}>Move up</button><button class="btn ghost" data-act="down" ${dis}>Move down</button>
-      <button class="btn ghost" data-act="del" style="color:var(--earth)" ${dis}>Delete stop</button></div>
-    ${conf}</div>`;
+    <div class="row"><button class="btn ghost" data-act="up" ${dis}>Move up</button><button class="btn ghost" data-act="down" ${dis}>Move down</button></div>
+    ${conf||`<div class="actbar"><button class="btn" data-act="stopsave">Save</button><button class="btn ghost" data-act="del" style="color:var(--earth)" ${dis}>Delete stop</button></div>`}</div>`;
 }
 
 function renderRoute(){
@@ -501,7 +499,7 @@ function surfCard(sp){
       <span class="sname">${esc(sp.name)}</span><span class="chip lv-${esc(sp.level)}">${esc(cap(sp.level))}</span>
       <span class="ssub">${esc(cap(sp.wave))} break${nr?` · ${Math.round(nr.km)} km from ${esc(nr.s.name)}`:""}${sp.note?` · ${esc(sp.note)}`:""}</span></button>`;
   if(!open)return `<li class="stop" data-sid="${sp.id}">${head}</li>`;
-  const conf=S.sfConfirm===sp.id?`<div class="confirm">Delete ${esc(sp.name)}? <button class="btn danger" data-act="sfcdelyes">Delete</button><button class="btn ghost" data-act="sfcdelno">Keep</button></div>`:"";
+  const conf=S.sfConfirm===sp.id?`<div class="confirm actbar">Really delete ${esc(sp.name)}? <button class="btn danger" data-act="sfcdelyes">Delete</button><button class="btn ghost" data-act="sfcdelno">Keep</button></div>`:"";
   return `<li class="stop sel" data-sid="${sp.id}">${head}<div class="ed">
     <div class="grid2">
       <label class="f">Name<input id="sfn-${sp.id}" data-sf="name" value="${esc(sp.name)}" ${dis}></label>
@@ -510,8 +508,8 @@ function surfCard(sp){
       <label class="f">Coordinates<input id="sfc-${sp.id}" data-sf="coords" value="${typeof sp.lat==="number"?sp.lat+", "+sp.lon:""}" placeholder="-33.87, 114.99" ${dis}></label>
     </div>
     <label class="f">Notes<textarea id="sfno-${sp.id}" data-sf="note" placeholder="Best swell, wind, tide, parking…" ${dis}>${esc(sp.note)}</textarea></label>
-    <div class="row"><button class="btn" data-act="sfcsave">Save</button><button class="btn ghost" data-act="sfshow">Show on map</button><button class="btn ghost" data-act="sfctrip" ${dis}>Add to trip</button><button class="btn ghost" data-act="sfcdel" style="color:var(--earth)" ${dis}>Delete spot</button></div>
-    ${conf}</div></li>`;
+    <div class="row"><button class="btn ghost" data-act="sfshow">Show on map</button><button class="btn ghost" data-act="sfctrip" ${dis}>Add to trip</button></div>
+    ${conf||`<div class="actbar"><button class="btn" data-act="sfcsave">Save</button><button class="btn ghost" data-act="sfcdel" style="color:var(--earth)" ${dis}>Delete spot</button></div>`}</div></li>`;
 }
 function renderSurf(){
   const dis=S.ro?"disabled":"";
