@@ -84,6 +84,9 @@ button{font:inherit;cursor:pointer}
 .leaflet-control-layers-overlays input:checked+span span{color:#2A1E05}
 .leaflet-control-layers-overlays input:focus-visible+span{outline:2px solid var(--earth);outline-offset:1px}
 .surfpin{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--warn);color:#2A1E05;border:2px solid var(--bg);box-sizing:border-box;cursor:pointer}
+.chip.lv-beginner{background:#173A2E;color:#7FD1AE}
+.chip.lv-intermediate{background:var(--warn-soft);color:var(--warn)}
+.chip.lv-advanced{background:#3A1A1A;color:#F09090}
 .surfpin.lvl-beginner{background:#7FD1AE}
 .surfpin.lvl-advanced{background:#E06A6A}
 #lmap.placing{cursor:crosshair}
@@ -192,6 +195,7 @@ body{margin:0}
   </header>
   <nav class="tabs" aria-label="Sections">
     <button data-act="tab" data-tab="route" aria-current="true">Route</button>
+    <button data-act="tab" data-tab="surf" aria-current="false">Surf</button>
     <button data-act="tab" data-tab="budget" aria-current="false">Budget</button>
     <button data-act="tab" data-tab="packing" aria-current="false">Packing</button>
   </nav>

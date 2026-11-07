@@ -300,7 +300,7 @@ function render(){
   document.querySelectorAll("nav.tabs button").forEach(b=>b.setAttribute("aria-current",b.dataset.tab===S.tab));
   if(!S.db)return;
   if(!S.got.stops){return}
-  ({route:renderRoute,budget:renderBudget,packing:renderPacking})[S.tab]();
+  ({route:renderRoute,surf:renderSurf,budget:renderBudget,packing:renderPacking})[S.tab]();
 }
 const editing=()=>{const a=document.activeElement;return a&&app.contains(a)&&/INPUT|TEXTAREA/.test(a.tagName)&&a.type!=="checkbox"};
 function schedule(){if(editing()){S.pending=true}else render()}
@@ -417,7 +417,7 @@ function updateSurfBtn(){const b=document.querySelector('[data-act="sfmode"]');i
 async function addSpotAt(ll){
   if(S.ro){toast(!Store.user?"Sign in at the top to add surf spots.":"You can't add spots right now.");return}
   if(!SURF||!MAP.hasLayer(SURF))SURF&&SURF.addTo(MAP);
-  const id="sf-"+mkid();S.openSurf=id;
+  const id="sf-"+mkid();S.openSurf=id;S.sfOpen=id;
   await w("surf/"+id,{name:"New surf spot",wave:"reef",level:"intermediate",note:"",lat:+ll.lat.toFixed(5),lon:+ll.lng.toFixed(5)},"set");
 }
 function surfPopup(sp){
@@ -442,7 +442,7 @@ function drawSurf(){
       icon:L.divIcon({className:"",iconSize:[28,28],iconAnchor:[14,14],popupAnchor:[0,-12],html:`<div class="surfpin lvl-${esc(sp.level)}">${WAVE_SVG}</div>`})}).addTo(SURF);
     m.bindTooltip(`${esc(sp.name)} · ${esc(sp.wave)} · ${esc(sp.level)}`,{direction:"top",offset:[0,-12],className:"tip"});
     m.bindPopup(()=>surfPopup(sp),{className:"sfpop",minWidth:280,maxWidth:320,autoPanPadding:[20,20]});
-    m.on("popupopen",()=>{SURF._openId=sp.id});
+    m._sid=sp.id;m.on("popupopen",()=>{SURF._openId=sp.id;if(S.tab==="surf"&&S.sfOpen!==sp.id){S.sfOpen=sp.id;S.sfConfirm=null;schedule();setTimeout(()=>{const li=app.querySelector(`li[data-sid="${sp.id}"]`);li&&li.scrollIntoView({block:"nearest"})},50)}});
     m.on("popupclose",()=>{if(SURF._openId===sp.id)SURF._openId=null;S.sfConfirm=null});
     m.on("dragend",async()=>{const p=m.getLatLng();await w("surf/"+sp.id,{lat:+p.lat.toFixed(5),lon:+p.lng.toFixed(5)})});
     if(sp.id===keepOpen)setTimeout(()=>m.openPopup(),0);
@@ -472,14 +472,107 @@ document.addEventListener("click",async e=>{
     MAP.closePopup();S.open=nid;render();toast(`${sp.name} added after ${near.name}`);return}
 });
 
+/* ---------- Surf page: list and edit the surf spot databank ---------- */
+S.sfOpen=null;S.sfLevel="all";S.sfWave="all";
+const cap=s=>s?s[0].toUpperCase()+s.slice(1):"";
+function nearestStop(sp){let best=null,bd=1e9;S.stops.forEach((s,i)=>{if(!hasXY(s)||typeof sp.lat!=="number")return;const d=hav(s,sp);if(d<bd){bd=d;best={s,i}}});return best?{...best,km:bd}:null}
+function surfCard(sp){
+  const open=S.sfOpen===sp.id,dis=S.ro?"disabled":"",nr=nearestStop(sp);
+  const head=`<button class="stop-head" data-act="sftoggle" aria-expanded="${open}">
+      <span class="daybox"><span class="surfpin lvl-${esc(sp.level)}" style="margin:0 auto">${WAVE_SVG}</span></span>
+      <span class="sname">${esc(sp.name)}</span><span class="chip lv-${esc(sp.level)}">${esc(cap(sp.level))}</span>
+      <span class="ssub">${esc(cap(sp.wave))} break${nr?` · ${Math.round(nr.km)} km from ${esc(nr.s.name)}`:""}${sp.note?` · ${esc(sp.note)}`:""}</span></button>`;
+  if(!open)return `<li class="stop" data-sid="${sp.id}">${head}</li>`;
+  const conf=S.sfConfirm===sp.id?`<div class="confirm">Delete ${esc(sp.name)}? <button class="btn danger" data-act="sfcdelyes">Delete</button><button class="btn ghost" data-act="sfcdelno">Keep</button></div>`:"";
+  return `<li class="stop sel" data-sid="${sp.id}">${head}<div class="ed">
+    <div class="grid2">
+      <label class="f">Name<input id="sfn-${sp.id}" data-sf="name" value="${esc(sp.name)}" ${dis}></label>
+      <label class="f">Wave type<select id="sfw-${sp.id}" data-sf="wave" ${dis}>${WAVES.map(x=>`<option value="${x}" ${x===sp.wave?"selected":""}>${cap(x)} break</option>`).join("")}</select></label>
+      <label class="f">Level<select id="sfl-${sp.id}" data-sf="level" ${dis}>${LEVELS.map(x=>`<option value="${x}" ${x===sp.level?"selected":""}>${cap(x)}</option>`).join("")}</select></label>
+      <label class="f">Coordinates<input id="sfc-${sp.id}" data-sf="coords" value="${typeof sp.lat==="number"?sp.lat+", "+sp.lon:""}" placeholder="-33.87, 114.99" ${dis}></label>
+    </div>
+    <label class="f">Notes<textarea id="sfno-${sp.id}" data-sf="note" placeholder="Best swell, wind, tide, parking…" ${dis}>${esc(sp.note)}</textarea></label>
+    <div class="row"><button class="btn ghost" data-act="sfshow">Show on map</button><button class="btn ghost" data-act="sfctrip" ${dis}>Add to trip</button><button class="btn ghost" data-act="sfcdel" style="color:var(--earth)" ${dis}>Delete spot</button></div>
+    ${conf}</div></li>`;
+}
+function renderSurf(){
+  const dis=S.ro?"disabled":"";
+  const vis=S.surf.filter(sp=>(S.sfLevel==="all"||sp.level===S.sfLevel)&&(S.sfWave==="all"||sp.wave===S.sfWave));
+  const groups=new Map();
+  vis.forEach(sp=>{const nr=nearestStop(sp),k=nr?nr.s.id:"_none";if(!groups.has(k))groups.set(k,{nr,items:[]});groups.get(k).items.push(sp)});
+  const ordered=[...groups.values()].sort((a,b)=>(a.nr?a.nr.i:1e9)-(b.nr?b.nr.i:1e9));
+  const list=ordered.map(g=>`<div class="section-h" style="padding:12px 0 6px"><h3 style="font-size:17px">${g.nr?`<span class="snum">${g.nr.i+1}</span>Near ${esc(g.nr.s.name)}`:"Other spots"}</h3><span class="note">${g.items.length} spot${g.items.length>1?"s":""}</span></div>
+    <ul class="log" style="gap:8px">${g.items.sort((a,b)=>(nearestStop(a)?.km||0)-(nearestStop(b)?.km||0)).map(surfCard).join("")}</ul>`).join("");
+  const chips=(cur,act,opts)=>`<div class="row" role="group">${opts.map(([v,l])=>`<button class="fchip ${v===cur?"on":""}" data-act="${act}" data-v="${v}" aria-pressed="${v===cur}">${l}</button>`).join("")}</div>`;
+  const empty=S.surf.length?`<div class="empty">No spots match these filters.</div>`:
+    (Store.user&&Store.member&&!S.ro?`<div class="empty">No surf spots yet. <button class="btn" data-act="surfseed">Load 16 suggested surf spots</button></div>`:`<div class="empty">${Store.user?"No surf spots yet. Add one below.":"Sign in at the top to see your surf spots."}</div>`);
+  app.innerHTML=`<div class="route trip">
+    <div class="mapbox"><div id="mapslot"></div><div class="maplegend"><span>Surf: <i class="dot" style="background:#7FD1AE;margin-left:4px"></i>beginner <i class="dot" style="background:var(--warn);margin-left:6px"></i>intermediate <i class="dot" style="background:#E06A6A;margin-left:6px"></i>advanced</span><span>Right-click or press and hold on the map to add a spot</span><span class="row" style="gap:6px;margin-left:auto"><button class="btn ghost small${S.surfMode?" on":""}" data-act="sfmode">${S.surfMode?"Tap the map to place it…":"+ Surf spot"}</button><button class="btn ghost small" data-act="sffit">All spots</button></span></div></div>
+    <div>
+      <div class="section-h"><h2>Surf spots</h2><span class="note">${S.surf.length} spots · grouped by nearest stop on the route</span></div>
+      <div style="display:grid;gap:8px;margin-bottom:6px">${chips(S.sfLevel,"sflevel",[["all","All levels"],...LEVELS.map(x=>[x,cap(x)])])}${chips(S.sfWave,"sfwave",[["all","All waves"],...WAVES.map(x=>[x,cap(x)+" break"])])}</div>
+      ${vis.length?list:empty}
+      <form class="panel" id="addSpot" style="margin-top:18px">
+        <h2>Add a surf spot</h2>
+        <div class="grid2">
+          <label class="f">Name<input id="ns-name" required placeholder="e.g. Cowaramup Point"></label>
+          <label class="f">Wave type<select id="ns-wave">${WAVES.map(x=>`<option value="${x}" ${x==="point"?"selected":""}>${cap(x)} break</option>`).join("")}</select></label>
+          <label class="f">Level<select id="ns-level">${LEVELS.map(x=>`<option value="${x}" ${x==="intermediate"?"selected":""}>${cap(x)}</option>`).join("")}</select></label>
+          <label class="f">Coordinates<input id="ns-c" placeholder="-33.87, 114.99"></label>
+        </div>
+        <label class="f">Notes<textarea id="ns-note" placeholder="Best swell, wind, tide, parking…"></textarea></label>
+        <p class="note" style="margin:0">No coordinates? Use "+ Surf spot" on the map and tap the place instead.</p>
+        <div class="row"><button class="btn" type="submit" ${dis}>Add spot</button><span class="note" id="ns-err"></span></div>
+      </form>
+    </div></div>`;
+  mountMap();
+  if(SURF&&!MAP.hasLayer(SURF))SURF.addTo(MAP);
+}
+function fitSurf(){const pts=S.surf.filter(x=>typeof x.lat==="number").map(x=>[x.lat,x.lon]);if(MAP&&pts.length)MAP.fitBounds(pts,{padding:[30,30]})}
+function openSpotOnMap(id){const sp=S.surf.find(x=>x.id===id);if(!sp||!MAP)return;if(SURF&&!MAP.hasLayer(SURF))SURF.addTo(MAP);
+  MAP.setView([sp.lat,sp.lon],Math.max(MAP.getZoom(),12));SURF.eachLayer(l=>{if(l._sid===id)l.openPopup()});
+  document.getElementById("mapslot")?.scrollIntoView({block:"nearest",behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth"})}
+document.addEventListener("click",async e=>{
+  const el=e.target.closest("[data-act]");if(!el)return;const a=el.dataset.act;
+  if(a==="sflevel"){S.sfLevel=el.dataset.v;render();return}
+  if(a==="sfwave"){S.sfWave=el.dataset.v;render();return}
+  if(a==="sffit"){fitSurf();return}
+  const li=el.closest("li[data-sid]");if(!li)return;const id=li.dataset.sid,sp=S.surf.find(x=>x.id===id);if(!sp)return;
+  if(a==="sftoggle"){S.sfOpen=S.sfOpen===id?null:id;S.sfConfirm=null;render();if(S.sfOpen&&MAP&&typeof sp.lat==="number")MAP.panTo([sp.lat,sp.lon]);return}
+  if(a==="sfshow"){openSpotOnMap(id);return}
+  if(a==="sfcdel"){S.sfConfirm=id;render();return}
+  if(a==="sfcdelno"){S.sfConfirm=null;render();return}
+  if(a==="sfcdelyes"){S.sfConfirm=null;S.sfOpen=null;await w("surf/"+id,null,"delete");toast(`Deleted ${sp.name}`);return}
+  if(a==="sfctrip"){const nr=nearestStop(sp);if(!nr){toast("Add a stop to the route first.");return}
+    const nx=S.stops[nr.i+1],order=nx?(nr.s.order+nx.order)/2:nr.s.order+10,nid=mkid();
+    await w("stops/"+nid,{name:sp.name,nights:0,kind:"day",order,lat:sp.lat,lon:sp.lon,camp:"",notes:sp.note||"",highlights:[{n:`${sp.wave} break, ${sp.level}`,k:"surf"}]},"set");
+    toast(`${sp.name} added to the route after ${nr.s.name}`);return}
+});
+document.addEventListener("change",async e=>{
+  const el=e.target,f=el.dataset.sf;if(!f)return;const li=el.closest("li[data-sid]");if(!li)return;const id=li.dataset.sid;
+  if(f==="coords"){const xy=parseXY(el.value);if(!xy){toast("Use the format -33.87, 114.99");return}await w("surf/"+id,xy);return}
+  if(f==="name"&&!el.value.trim()){toast("A spot needs a name");return}
+  await w("surf/"+id,{[f]:f==="note"?el.value.trim():el.value});
+});
+document.addEventListener("submit",async e=>{
+  if(e.target.id!=="addSpot")return;e.preventDefault();
+  const name=document.getElementById("ns-name").value.trim(),raw=document.getElementById("ns-c").value.trim(),err=document.getElementById("ns-err");
+  if(!name){err.textContent="Give the spot a name.";return}
+  if(!raw){err.textContent="Add coordinates, or use \"+ Surf spot\" on the map.";return}
+  const xy=parseXY(raw);if(!xy){err.textContent="Coordinates not recognised. Use -33.87, 114.99";return}
+  const id="sf-"+mkid();S.sfOpen=id;
+  await w("surf/"+id,{name,wave:document.getElementById("ns-wave").value,level:document.getElementById("ns-level").value,note:document.getElementById("ns-note").value.trim(),...xy},"set");
+  toast(`Added ${name}`);
+});
+
 (async()=>{
   try{const v=localStorage.getItem("wa-who");if(v&&["All",...WHO].includes(v))S.who=v}catch(_){}
-  const h=location.hash.slice(1);if(["route","budget","packing"].includes(h))S.tab=h;
+  const h=location.hash.slice(1);if(["route","surf","budget","packing"].includes(h))S.tab=h;
   Store.load();S.db=db;S.got.stops=true;updateAuth();
   db.collection("stops").orderBy("order").onSnapshot(q=>{S.stops=q.docs.map(d=>({id:d.id,...d.data()}));schedule()});
   db.collection("budget").onSnapshot(q=>{S.budget=q.docs.map(d=>({id:d.id,...d.data()}));schedule()});
   db.collection("packing").onSnapshot(q=>{S.packing=q.docs.map(d=>({id:d.id,...d.data()}));schedule()});
-  db.collection("surf").onSnapshot(q=>{S.surf=q.docs.map(d=>({id:d.id,...d.data()}));drawSurf();if(S.tab==="route")schedule()});
+  db.collection("surf").onSnapshot(q=>{S.surf=q.docs.map(d=>({id:d.id,...d.data()}));drawSurf();if(S.tab==="route"||S.tab==="surf")schedule()});
   db.doc("trip/settings").onSnapshot(d=>{S.settings=d.exists?{...d.data()}:{};schedule()});
   if("serviceWorker" in navigator){const had=!!navigator.serviceWorker.controller;navigator.serviceWorker.register("sw.js",{updateViaCache:"none"}).then(r=>r.update()).catch(()=>{});
     let reloaded=false;navigator.serviceWorker.addEventListener("controllerchange",()=>{if(had&&!reloaded){reloaded=true;location.reload()}})}
