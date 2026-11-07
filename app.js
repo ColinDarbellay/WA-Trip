@@ -108,13 +108,16 @@ function mountMap(){
   if(!MAP){
     MAP=L.map(mapEl,{zoomSnap:.5,tap:true});
     const OSM='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',RT=' · routes <a href="https://project-osrm.org">OSRM</a>';
+    const ESRI="https://server.arcgisonline.com/ArcGIS/rest/services/";
     const STYLES={
-      "Dark":L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",{subdomains:"abcd",maxZoom:19,attribution:OSM+' &copy; <a href="https://carto.com/attributions">CARTO</a>'+RT}),
-      "Light":L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",{subdomains:"abcd",maxZoom:19,attribution:OSM+' &copy; <a href="https://carto.com/attributions">CARTO</a>'+RT}),
-      "Detailed":L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:OSM+RT}),
-      "Satellite":L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",{maxZoom:19,attribution:'Imagery &copy; Esri, Maxar, Earthstar Geographics'+RT})
+      "Map":L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:OSM+RT}),
+      "Satellite":L.layerGroup([
+        L.tileLayer(ESRI+"World_Imagery/MapServer/tile/{z}/{y}/{x}",{maxZoom:19,attribution:'Imagery &copy; Esri, Maxar, Earthstar Geographics · labels &copy; Esri, HERE, Garmin, OpenStreetMap'+RT}),
+        L.tileLayer(ESRI+"Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}",{maxZoom:19,opacity:.85}),
+        L.tileLayer(ESRI+"Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}",{maxZoom:19})
+      ])
     };
-    let pick="Dark";try{const v=localStorage.getItem("wa-map");if(v&&STYLES[v])pick=v}catch(_){}
+    let pick="Map";try{const v=localStorage.getItem("wa-map");if(v&&STYLES[v])pick=v}catch(_){}
     STYLES[pick].addTo(MAP);
     L.control.layers(STYLES,null,{position:"topright",collapsed:false}).addTo(MAP);
     MAP.on("baselayerchange",e=>{try{localStorage.setItem("wa-map",e.name)}catch(_){}});
