@@ -107,7 +107,17 @@ function mountMap(){
   if(!window.L){mapEl.innerHTML=`<div class="empty">The map needs an internet connection the first time it loads.</div>`;return}
   if(!MAP){
     MAP=L.map(mapEl,{zoomSnap:.5,tap:true});
-    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors · routes <a href="https://project-osrm.org">OSRM</a>'}).addTo(MAP);
+    const OSM='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',RT=' · routes <a href="https://project-osrm.org">OSRM</a>';
+    const STYLES={
+      "Dark":L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",{subdomains:"abcd",maxZoom:19,attribution:OSM+' &copy; <a href="https://carto.com/attributions">CARTO</a>'+RT}),
+      "Light":L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",{subdomains:"abcd",maxZoom:19,attribution:OSM+' &copy; <a href="https://carto.com/attributions">CARTO</a>'+RT}),
+      "Detailed":L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:OSM+RT}),
+      "Satellite":L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",{maxZoom:19,attribution:'Imagery &copy; Esri, Maxar, Earthstar Geographics'+RT})
+    };
+    let pick="Dark";try{const v=localStorage.getItem("wa-map");if(v&&STYLES[v])pick=v}catch(_){}
+    STYLES[pick].addTo(MAP);
+    L.control.layers(STYLES,null,{position:"topright",collapsed:false}).addTo(MAP);
+    MAP.on("baselayerchange",e=>{try{localStorage.setItem("wa-map",e.name)}catch(_){}});
     LAYER=L.layerGroup().addTo(MAP);
     const pts=S.stops.filter(hasXY).map(s=>[s.lat,s.lon]);
     pts.length?MAP.fitBounds(pts,{padding:[24,24]}):MAP.setView([-31.95,115.86],6);
