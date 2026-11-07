@@ -1,7 +1,7 @@
 // Offline support: app files and libraries are cached; map tiles you have viewed stay available offline.
-const APP = "wa-app-v5", TILES = "wa-tiles", MAX_TILES = 4000;
+const APP = "wa-app-v6", TILES = "wa-tiles", MAX_TILES = 4000;
 const SHELL = ["./", "./index.html", "./app.js", "./config.js", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png", "./seed.json"];
-self.addEventListener("install", e => { e.waitUntil(caches.open(APP).then(c => c.addAll(SHELL)).then(() => self.skipWaiting())); });
+self.addEventListener("install", e => { e.waitUntil(caches.open(APP).then(c => c.addAll(SHELL.map(u => new Request(u, { cache: "reload" })))).then(() => self.skipWaiting())); });
 self.addEventListener("activate", e => {
   e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== APP && k !== TILES).map(k => caches.delete(k)))).then(() => self.clients.claim()));
 });
@@ -20,13 +20,26 @@ self.addEventListener("fetch", e => {
     }));
     return;
   }
-  // App files and CDN libraries: serve cached copy, refresh in the background.
+  // Own app files: always try the network first (fresh updates), fall back to the saved copy offline.
+  if (url.origin === location.origin) {
+    e.respondWith(caches.open(APP).then(async c => {
+      try {
+        const res = await fetch(new Request(req, { cache: "no-cache" }));
+        if (res.ok) c.put(req, res.clone());
+        return res;
+      } catch (_) {
+        const hit = await c.match(req, { ignoreSearch: true });
+        if (hit) return hit;
+        if (req.mode === "navigate") return c.match("./index.html");
+        return Response.error();
+      }
+    }));
+    return;
+  }
+  // CDN libraries (pinned versions, never change): saved copy first.
   e.respondWith(caches.open(APP).then(async c => {
-    const hit = await c.match(req, { ignoreSearch: url.origin === location.origin });
-    const net = fetch(req).then(res => { if (res.ok || res.type === "opaque") c.put(req, res.clone()); return res; }).catch(() => null);
-    if (hit) { e.waitUntil(net); return hit; }
-    const res = await net; if (res) return res;
-    if (req.mode === "navigate") return c.match("./index.html");
-    return Response.error();
+    const hit = await c.match(req); if (hit) return hit;
+    try { const res = await fetch(req); if (res.ok || res.type === "opaque") c.put(req, res.clone()); return res; }
+    catch (_) { return Response.error(); }
   }));
 });

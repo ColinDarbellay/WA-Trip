@@ -357,7 +357,8 @@ async function w(path,data,mode){
   db.collection("budget").onSnapshot(q=>{S.budget=q.docs.map(d=>({id:d.id,...d.data()}));schedule()});
   db.collection("packing").onSnapshot(q=>{S.packing=q.docs.map(d=>({id:d.id,...d.data()}));schedule()});
   db.doc("trip/settings").onSnapshot(d=>{S.settings=d.exists?{...d.data()}:{};schedule()});
-  if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{});
+  if("serviceWorker" in navigator){const had=!!navigator.serviceWorker.controller;navigator.serviceWorker.register("sw.js",{updateViaCache:"none"}).then(r=>r.update()).catch(()=>{});
+    let reloaded=false;navigator.serviceWorker.addEventListener("controllerchange",()=>{if(had&&!reloaded){reloaded=true;location.reload()}})}
   addEventListener("online",()=>{updateAuth();render();pull();fetchRoutes()});
   addEventListener("offline",()=>{updateAuth();render()});
   document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")pull()});
