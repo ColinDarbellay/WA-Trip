@@ -94,8 +94,8 @@ function updateAuth(){
   const el=document.getElementById("auth");if(!el)return;
   if(!SB){el.innerHTML=`<span class="note">Sync isn't set up yet: add your Supabase details to config.js (see README).</span>`;return}
   if(!navigator.onLine){el.innerHTML=`<span class="pill off">Offline</span><span class="note">Showing the last saved version. Editing comes back when you're online.</span>`;return}
-  if(!Store.user){el.innerHTML=`<form id="login" class="row" style="gap:6px"><span class="note">Sign in to edit and sync:</span><input id="lg-mail" type="email" required placeholder="your@email.com" autocomplete="email" style="width:auto;flex:1;min-width:180px"><button class="btn" type="submit">Send login link</button></form>`;return}
-  el.innerHTML=Store.member?`<span class="pill on">Synced</span><span class="note">Signed in as ${esc(Store.user.email)}</span><button class="btn ghost" data-act="logout">Sign out</button>`
+  if(!Store.user){el.innerHTML=`<form id="login" class="row" style="gap:6px"><input id="lg-mail" type="email" required placeholder="Email" autocomplete="username" style="width:auto;flex:1;min-width:170px"><input id="lg-pw" type="password" required minlength="6" placeholder="Password" autocomplete="current-password" style="width:auto;flex:1;min-width:130px"><button class="btn" type="submit">Sign in</button><button class="btn ghost" type="button" data-act="signup">Create account</button></form>`;return}
+  el.innerHTML=S.setPw?`<form id="setpw" class="row" style="gap:6px"><input id="sp-pw" type="password" required minlength="6" placeholder="New password (min. 6)" autocomplete="new-password" style="width:auto;flex:1;min-width:170px"><button class="btn" type="submit">Save password</button><button class="btn ghost" type="button" data-act="setpwcancel">Cancel</button></form>`:Store.member?`<span class="pill on">Synced</span><span class="note">Signed in as ${esc(Store.user.email)}</span><button class="btn ghost" data-act="setpw">Set password</button><button class="btn ghost" data-act="logout">Sign out</button>`
     :`<span class="pill off">No access</span><span class="note">${esc(Store.user.email)} isn't on the members list yet.</span><button class="btn ghost" data-act="logout">Sign out</button>`;
 }
 
@@ -372,13 +372,28 @@ async function w(path,data,mode){
 
 
 document.addEventListener("submit",async e=>{
+  if(e.target.id==="setpw"){e.preventDefault();const pw=document.getElementById("sp-pw").value;
+    if(pw.length<6){toast("Use at least 6 characters.");return}
+    const {error}=await SB.auth.updateUser({password:pw});
+    if(error){toast("Couldn't save the password: "+error.message);return}
+    S.setPw=false;updateAuth();toast("Password saved. Use it to sign in on your other devices.");return}
   if(e.target.id!=="login")return;e.preventDefault();
-  const mail=document.getElementById("lg-mail").value.trim();if(!mail)return;
-  const {error}=await SB.auth.signInWithOtp({email:mail,options:{emailRedirectTo:location.origin+location.pathname}});
-  toast(error?("Couldn't send the link: "+error.message):"Check your email and tap the login link.");
+  const mail=document.getElementById("lg-mail").value.trim(),pw=document.getElementById("lg-pw").value;if(!mail||!pw)return;
+  const {error}=await SB.auth.signInWithPassword({email:mail,password:pw});
+  if(error)toast(/invalid/i.test(error.message)?"Email or password is wrong. First time here? Tap Create account.":"Couldn't sign in: "+error.message);
 });
+async function signUp(){
+  const mail=document.getElementById("lg-mail")?.value.trim(),pw=document.getElementById("lg-pw")?.value||"";
+  if(!mail){toast("Enter your email first.");return}if(pw.length<6){toast("Choose a password with at least 6 characters.");return}
+  const {data,error}=await SB.auth.signUp({email:mail,password:pw});
+  if(error){toast(/registered|exists/i.test(error.message)?"This email already has an account. Sign in, or set a password from a device where you're signed in.":"Couldn't create the account: "+error.message);return}
+  if(!data.session)toast("Account created, but Supabase wants an email confirmation. Turn off \"Confirm email\" in Supabase (see README).");
+}
 document.addEventListener("click",async e=>{
   const el=e.target.closest("[data-act]");if(!el)return;
+  if(el.dataset.act==="signup"){signUp();return}
+  if(el.dataset.act==="setpw"){S.setPw=true;updateAuth();document.getElementById("sp-pw")?.focus();return}
+  if(el.dataset.act==="setpwcancel"){S.setPw=false;updateAuth();return}
   if(el.dataset.act==="logout"){await SB.auth.signOut();Store.docs.clear();Store.save();Store.emit();updateAuth();render()}
   if(el.dataset.act==="fitall")fitAll();
   if(el.dataset.act==="importseed"){

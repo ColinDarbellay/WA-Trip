@@ -19,20 +19,17 @@ Setup takes about 20 minutes, once. You need a free GitHub account and a free Su
 3. Go to **Settings → Pages**. Under *Build and deployment*, choose **Deploy from a branch**, branch **main**, folder **/ (root)**, and **Save**.
 4. After a minute, your app is at `https://YOUR-GITHUB-NAME.github.io/wa-trip/`.
 
-## 3. Connect login to your app address
+## 3. Login settings
 
-In Supabase: **Authentication → URL Configuration**
-
-- **Site URL**: your GitHub Pages address from step 2.4
-- **Redirect URLs**: add the same address.
+In Supabase: **Authentication → Sign In / Providers → Email**: turn **off** "Confirm email" and save. Login uses email + password, so no emails are sent.
 
 ## 4. First start
 
-1. Open the app address on your phone, enter your email at the top, and tap **Send login link**. Open the email on the same phone and tap the link.
-2. The route list shows **Load our saved route (25 stops)**. Tap it once to bring in everything planned so far.
-3. Road routes are drawn one leg at a time over the first minute and then saved.
-4. Add the app to your home screen: on iPhone **Share → Add to Home Screen**, on Android **⋮ → Install app**.
-5. Isabel does step 1 on her phone with her email. Everything she changes appears on yours within a second, and the other way round.
+1. Open the app address, enter your email and a password (min. 6 characters), and tap **Create account**. Your email must be in the `members` table.
+2. The route list shows **Load our saved route (25 stops)**. Tap it once. The Surf tab offers the suggested surf spots the same way.
+3. On every other device, enter the same email and password and tap **Sign in**.
+4. Add the app to your home screen: on iPhone **Share → Add to Home Screen**, on Android **⋮ → Install app**. Sign in inside the home-screen app once.
+5. Already signed in with an older login link? Tap **Set password** at the top to add a password to your account.
 
 ## Offline
 
