@@ -149,6 +149,9 @@ label.f{display:grid;gap:4px;font-size:12.5px;color:var(--muted)}
 .hl li{display:grid;grid-template-columns:110px minmax(0,1fr) auto;gap:6px;align-items:center}
 .x{background:none;border:1px solid var(--line);border-radius:50%;color:var(--muted);width:34px;height:34px}
 .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.notebody{min-height:180px;line-height:1.55}
+.notelinks{display:grid;gap:4px;font-size:14px}
+.notelinks a{color:var(--ocean);word-break:break-all}
 .actbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;border-top:1px solid var(--line);padding-top:12px}
 .confirm{background:var(--earth-soft);color:var(--earth);border-radius:12px;padding:10px 12px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .panel{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px;display:grid;gap:12px}
@@ -205,6 +208,7 @@ body{margin:0}
     <button data-act="tab" data-tab="surf" aria-current="false">Surf</button>
     <button data-act="tab" data-tab="budget" aria-current="false">Budget</button>
     <button data-act="tab" data-tab="packing" aria-current="false">Packing</button>
+    <button data-act="tab" data-tab="notes" aria-current="false">Notes</button>
   </nav>
   <div id="status" class="status" hidden></div>
   <main id="app"><div class="empty">Loading your route, budget and packing list…</div></main>

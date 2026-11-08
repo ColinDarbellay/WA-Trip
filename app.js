@@ -324,7 +324,7 @@ function render(){
   document.querySelectorAll("nav.tabs button").forEach(b=>b.setAttribute("aria-current",b.dataset.tab===S.tab));
   if(!S.db)return;
   if(!S.got.stops){return}
-  ({route:renderRoute,surf:renderSurf,budget:renderBudget,packing:renderPacking})[S.tab]();
+  ({route:renderRoute,surf:renderSurf,budget:renderBudget,packing:renderPacking,notes:renderNotes})[S.tab]();
 }
 const editing=()=>{const a=document.activeElement;return a&&app.contains(a)&&/INPUT|TEXTAREA/.test(a.tagName)&&a.type!=="checkbox"};
 function schedule(){if(editing()){S.pending=true}else render()}
@@ -609,13 +609,87 @@ document.addEventListener("submit",async e=>{
   toast(`Added ${name}`);
 });
 
+/* ---------- Notes page: research notes by topic (van, flights, surf…) ---------- */
+S.notes=[];S.ntOpen=null;S.ntCat="all";S.ntQ="";S.ntConfirm=null;
+const NOTE_CATS=["Van","Flights","Surf","Camping","Budget","General"];
+function linkify(t){return esc(t).replace(/(https?:\/\/[^\s<]+[^\s<.,;:!?)\]'"])/g,u=>`<a href="${u}" target="_blank" rel="noopener">${u.replace(/^https?:\/\/(www\.)?/,"").slice(0,48)}${u.length>56?"…":""}</a>`).replace(/\n/g,"<br>")}
+const ntDate=ts=>{if(!ts)return"";const d=new Date(ts);return isNaN(d)?"":d.toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"})};
+function noteCard(n){
+  const open=S.ntOpen===n.id,dis=S.ro?"disabled":"";
+  const preview=(n.body||"").replace(/\s+/g," ").trim();
+  const head=`<button class="stop-head" data-act="nttoggle" aria-expanded="${open}">
+      <span class="daybox"><b style="font-size:13px">${esc(n.cat||"General")}</b>${ntDate(n.updated)}</span>
+      <span class="sname">${esc(n.title||"Untitled note")}</span><span></span>
+      <span class="ssub">${esc(preview)||"Empty note"}</span></button>`;
+  if(!open)return `<li class="stop" data-nid="${n.id}">${head}</li>`;
+  const conf=S.ntConfirm===n.id?`<div class="confirm actbar">Really delete “${esc(n.title||"this note")}”? <button class="btn danger" data-act="ntdelyes">Delete</button><button class="btn ghost" data-act="ntdelno">Keep</button></div>`:"";
+  return `<li class="stop sel" data-nid="${n.id}">${head}<div class="ed">
+    <div class="grid2">
+      <label class="f">Title<input id="ntt-${n.id}" data-nt="title" value="${esc(n.title)}" ${dis}></label>
+      <label class="f">Topic<input id="ntc-${n.id}" data-nt="cat" list="nt-cats" value="${esc(n.cat)}" ${dis}></label>
+    </div>
+    <label class="f">Note<textarea id="ntb-${n.id}" data-nt="body" class="notebody" placeholder="What you found, prices, pros and cons, links…" ${dis}>${esc(n.body)}</textarea></label>
+    ${n.body&&/https?:\/\//.test(n.body)?`<div class="notelinks"><div class="eyebrow" style="font-size:13px">Links in this note</div>${(n.body.match(/https?:\/\/[^\s<]+[^\s<.,;:!?)\]'"]/g)||[]).map(u=>`<a href="${esc(u)}" target="_blank" rel="noopener">${esc(u.replace(/^https?:\/\/(www\.)?/,"").slice(0,60))}</a>`).join("")}</div>`:""}
+    ${n.by?`<div class="note">Last edited by ${esc(n.by)}${n.updated?` on ${ntDate(n.updated)}`:""}</div>`:""}
+    ${conf||`<div class="actbar"><button class="btn ghost" data-act="ntdel" style="color:var(--earth)" ${dis}>Delete note</button><button class="btn" data-act="ntsave">Save</button></div>`}
+  </div></li>`;
+}
+function renderNotes(){
+  const dis=S.ro?"disabled":"";
+  const cats=[...new Set([...NOTE_CATS,...S.notes.map(n=>n.cat).filter(Boolean)])];
+  const q=S.ntQ.trim().toLowerCase();
+  const vis=S.notes.filter(n=>(S.ntCat==="all"||(n.cat||"General")===S.ntCat)&&(!q||((n.title||"")+" "+(n.body||"")+" "+(n.cat||"")).toLowerCase().includes(q)))
+    .sort((a,b)=>String(b.updated||"").localeCompare(String(a.updated||"")));
+  const cnt=c=>S.notes.filter(n=>c==="all"||(n.cat||"General")===c).length;
+  app.innerHTML=`<div style="display:grid;gap:14px;max-width:900px">
+    <datalist id="nt-cats">${cats.map(c=>`<option value="${esc(c)}">`).join("")}</datalist>
+    <div class="row" style="gap:8px"><input id="nt-q" type="search" placeholder="Search notes" value="${esc(S.ntQ)}" style="flex:1;min-width:180px;width:auto" aria-label="Search notes"></div>
+    <div class="row" role="group" aria-label="Topic">${["all",...cats].filter(c=>c==="all"||cnt(c)||NOTE_CATS.includes(c)).map(c=>`<button class="fchip ${c===S.ntCat?"on":""}" data-act="ntcat" data-v="${esc(c)}" aria-pressed="${c===S.ntCat}">${c==="all"?"All":esc(c)} <span>${cnt(c)}</span></button>`).join("")}</div>
+    ${vis.length?`<ul class="log" style="gap:8px">${vis.map(noteCard).join("")}</ul>`:`<div class="empty">${S.notes.length?"No notes match.":"No notes yet. Write down what you find about the van, flights, surf or anything else, and Isabel sees it too."}</div>`}
+    <form id="addNote" class="panel"><h2>New note</h2>
+      <div class="grid2">
+        <label class="f">Title<input id="an-t" required placeholder="e.g. Camper rental comparison"></label>
+        <label class="f">Topic<input id="an-c" list="nt-cats" value="${esc(S.ntCat==="all"?"General":S.ntCat)}" placeholder="Van, Flights, Surf…"></label>
+      </div>
+      <label class="f">Note<textarea id="an-b" class="notebody" placeholder="Paste what you found: prices, conditions, links…"></textarea></label>
+      <div class="row"><button class="btn" type="submit" ${dis}>Add note</button><span class="note" id="an-err"></span></div>
+    </form>
+  </div>`;
+}
+document.addEventListener("input",e=>{if(e.target.id!=="nt-q")return;S.ntQ=e.target.value;const pos=e.target.selectionStart;
+  clearTimeout(S.ntT);S.ntT=setTimeout(()=>{render();const q=document.getElementById("nt-q");if(q){q.focus();try{q.setSelectionRange(pos,pos)}catch(_){}}},250)});
+document.addEventListener("click",async e=>{
+  const el=e.target.closest("[data-act]");if(!el)return;const a=el.dataset.act;
+  if(a==="ntcat"){S.ntCat=el.dataset.v;render();return}
+  const li=el.closest("li[data-nid]");if(!li)return;const id=li.dataset.nid,n=S.notes.find(x=>x.id===id);if(!n)return;
+  if(a==="nttoggle"){commitEdits();S.ntOpen=S.ntOpen===id?null:id;S.ntConfirm=null;render();return}
+  if(a==="ntsave"){commitEdits();S.ntOpen=null;S.ntConfirm=null;render();toast("Saved");return}
+  if(a==="ntdel"){S.ntConfirm=id;render();return}
+  if(a==="ntdelno"){S.ntConfirm=null;render();return}
+  if(a==="ntdelyes"){S.ntConfirm=null;S.ntOpen=null;await w("notes/"+id,null,"delete");toast("Note deleted");return}
+});
+document.addEventListener("change",async e=>{
+  const el=e.target,f=el.dataset.nt;if(!f)return;const li=el.closest("li[data-nid]");if(!li)return;
+  const v=f==="cat"?(el.value.trim()||"General"):f==="title"?(el.value.trim()||"Untitled note"):el.value;
+  await w("notes/"+li.dataset.nid,{[f]:v,updated:new Date().toISOString(),by:Store.user?Store.user.email.split("@")[0]:""});
+});
+document.addEventListener("submit",async e=>{
+  if(e.target.id!=="addNote")return;e.preventDefault();
+  const title=document.getElementById("an-t").value.trim(),err=document.getElementById("an-err");if(!title){err.textContent="Give the note a title.";return}
+  const cat=document.getElementById("an-c").value.trim()||"General",body=document.getElementById("an-b").value;
+  const id="nt-"+mkid();S.ntOpen=null;
+  await w("notes/"+id,{title,cat,body,updated:new Date().toISOString(),by:Store.user?Store.user.email.split("@")[0]:""},"set");
+  ["an-t","an-b"].forEach(x=>{const f=document.getElementById(x);if(f)f.value=""});toast("Note added");
+});
+
 (async()=>{
   try{const v=localStorage.getItem("wa-who");if(v&&["All",...WHO].includes(v))S.who=v}catch(_){}
-  const h=location.hash.slice(1);if(["route","surf","budget","packing"].includes(h))S.tab=h;
+  const h=location.hash.slice(1);if(["route","surf","budget","packing","notes"].includes(h))S.tab=h;
   Store.load();S.db=db;S.got.stops=true;updateAuth();
   db.collection("stops").orderBy("order").onSnapshot(q=>{S.stops=q.docs.map(d=>({id:d.id,...d.data()}));schedule()});
   db.collection("budget").onSnapshot(q=>{S.budget=q.docs.map(d=>({id:d.id,...d.data()}));schedule()});
   db.collection("packing").onSnapshot(q=>{S.packing=q.docs.map(d=>({id:d.id,...d.data()}));schedule()});
+  db.collection("notes").onSnapshot(q=>{S.notes=q.docs.map(d=>({id:d.id,...d.data()}));if(S.tab==="notes")schedule()});
   db.collection("surf").onSnapshot(q=>{S.surf=q.docs.map(d=>({id:d.id,...d.data()}));drawSurf();if(S.tab==="route"||S.tab==="surf")schedule()});
   db.doc("trip/settings").onSnapshot(d=>{S.settings=d.exists?{...d.data()}:{};schedule()});
   if("serviceWorker" in navigator){const had=!!navigator.serviceWorker.controller;navigator.serviceWorker.register("sw.js",{updateViaCache:"none"}).then(r=>r.update()).catch(()=>{});
