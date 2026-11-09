@@ -13,10 +13,13 @@ const FX=()=>Number(S.settings.eurPerAud)||0.63;
 function toast(t){const el=document.getElementById("toast");el.textContent=t;el.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>el.hidden=true,2600)}
 function status(t){const el=document.getElementById("status");el.textContent=t||"";el.hidden=!t}
 
+const isOpt=s=>s.kind==="optional";
+function prevRoute(i){for(let j=i-1;j>=0;j--)if(!isOpt(S.stops[j]))return S.stops[j];return null}
+function routeNums(){const m={};let n=0;S.stops.forEach(s=>{if(!isOpt(s))m[s.id]=++n});return m}
 function computed(){
   let day=1,km=0,nights=0;const legs=[];
-  S.stops.forEach((s,i)=>{s._day=day;day+=Number(s.nights)||0;nights+=Number(s.nights)||0;
-    const p=S.stops[i-1];
+  S.stops.forEach((s,i)=>{s._day=day;if(isOpt(s))return;day+=Number(s.nights)||0;nights+=Number(s.nights)||0;
+    const p=prevRoute(i);
     if(p&&s.roadKm&&s.roadFor===p.id){legs[i]={km:Math.round(s.roadKm),min:Number(s.roadMin)||0,real:true};km+=legs[i].km}
     else if(p&&hasXY(p)&&hasXY(s)){const k=Math.round(hav(p,s)*ROAD/10)*10;legs[i]={km:k,min:Math.round(k/SPEED*60),real:false};km+=k}});
   return {legs,km,nights,days:day-1};
@@ -158,13 +161,14 @@ function legArrows(pts,earth){
 function drawMap(){
   if(!MAP)return;LAYER.clearLayers();
   const earth=tok("--earth"),ocean=tok("--ocean"),surf=tok("--surface");
-  S.stops.forEach((s,i)=>{const p=S.stops[i-1];if(!p||!hasXY(p)||!hasXY(s))return;
+  S.stops.forEach((s,i)=>{if(isOpt(s))return;const p=prevRoute(i);if(!p||!hasXY(p)||!hasXY(s))return;
     const pts=legOk(p,s)?s.route.c:[[p.lat,p.lon],[s.lat,s.lon]];
     if(legOk(p,s))L.polyline(pts,{color:earth,weight:4,opacity:.85,lineJoin:"round"}).addTo(LAYER);
     else L.polyline(pts,{color:earth,weight:2,opacity:.7,dashArray:"6 8"}).addTo(LAYER);
     legArrows(pts,earth)});
   const groups=new Map();
-  S.stops.forEach((s,i)=>{if(!hasXY(s))return;const k=s.lat.toFixed(3)+","+s.lon.toFixed(3);if(!groups.has(k))groups.set(k,[]);groups.get(k).push({s,num:i+1})});
+  const NUM=routeNums();
+  S.stops.forEach((s,i)=>{if(!hasXY(s))return;const k=s.lat.toFixed(3)+","+s.lon.toFixed(3);if(!groups.has(k))groups.set(k,[]);groups.get(k).push({s,num:isOpt(s)?"opt":NUM[s.id]})});
   groups.forEach(list=>{
     const k=list.length,gap=4;
     const ws=list.map(x=>Math.max(26,12+String(x.num).length*7.5));
@@ -172,10 +176,10 @@ function drawMap(){
     list.forEach((x,j)=>{const s=x.s,w=ws[j],sel=s.id===S.open,n=Number(s.nights)||0;
       const base=n>0&&s.kind!=="optional"&&s.kind!=="day",opt=s.kind==="optional";
       const ax=-left;left+=w+gap;
-      const m=L.marker([s.lat,s.lon],{zIndexOffset:sel?1000:0,keyboard:true,title:`${x.num}. ${s.name}`,
+      const m=L.marker([s.lat,s.lon],{zIndexOffset:sel?1000:0,keyboard:true,title:`${x.num==='opt'?'Optional:':x.num+'.'} ${s.name}`,
         icon:L.divIcon({className:"",iconSize:[w,26],iconAnchor:[ax,13],
           html:`<div class="num ${base?"base":"day"}${sel?" sel":""}${opt?" opt":""}">${x.num}</div>`})}).addTo(LAYER);
-      m.bindTooltip(`${x.num}. ${esc(s.name)}${n?` \u00b7 ${n} night${n>1?"s":""}`:""}`,{direction:"right",offset:[w-ax+2,0],permanent:sel,className:"tip"});
+      m.bindTooltip(`${x.num==='opt'?'Optional:':x.num+'.'} ${esc(s.name)}${n?` \u00b7 ${n} night${n>1?"s":""}`:""}`,{direction:"right",offset:[w-ax+2,0],permanent:sel,className:"tip"});
       m.on("click",()=>pickStop(s.id))});
   });
 }
@@ -212,7 +216,7 @@ async function routeLeg(p,s){
 const RQ={busy:false,again:false,failed:new Set()};
 async function fetchRoutes(){
   if(RQ.busy){RQ.again=true;return}if(!navigator.onLine)return;RQ.busy=true;
-  try{for(let i=1;i<S.stops.length;i++){const p=S.stops[i-1],s=S.stops[i];if(!hasXY(p)||!hasXY(s)||legOk(p,s))continue;
+  try{for(let i=1;i<S.stops.length;i++){const s=S.stops[i],p=prevRoute(i);if(isOpt(s)||!p||!hasXY(p)||!hasXY(s)||legOk(p,s))continue;
       const key=`${p.lat},${p.lon}>${s.lat},${s.lon}`;if(RQ.failed.has(key))continue;
       const rt=await routeLeg(p,s);if(!rt){RQ.failed.add(key);continue}
       const c=simplify(rt.pts,0.0004);
@@ -248,18 +252,18 @@ function stopEditor(s){
 function renderRoute(){
   const c=computed();
 
-  let items="";
+  let items="";const NUM=routeNums();
   S.stops.forEach((s,i)=>{
-    const p=S.stops[i-1];
-    if(i>0){const L=c.legs[i],km=L?L.km:null,a=L&&!L.real?"≈ ":"";
+    const p=prevRoute(i);
+    if(p&&!isOpt(s)){const L=c.legs[i],km=L?L.km:null,a=L&&!L.real?"≈ ":"";
       items+= L?`<li class="leg">${a}${km} km · ${a}${fmtMin(L.min)}${L.real?"":" (estimate)"}${km>400?' <span class="long">Long drive day</span>':""}${s.route&&s.route.v===2&&s.route.unpaved!==false?` <span class="long" title="${s.route.unpaved===null?"Route from a car router that may use unsealed roads":"No fully sealed road found for this leg"}">Unsealed road possible</span>`:""}${hasXY(p)&&hasXY(s)?` · <a href="${mapsLink(p,s)}" target="_blank" rel="noopener">Directions</a>`:""}</li>`:`<li class="leg">Add coordinates to see the distance</li>`}
     const n=Number(s.nights)||0,h=s.highlights||[];
     const chip=!hasXY(s)?`<span class="chip noloc">no location</span>`:s.kind==="optional"?`<span class="chip opt">optional</span>`:(n&&s.kind!=="day")?`<span class="chip ${s.nightsGuess?"guess":""}">${n} night${n>1?"s":""}</span>`:`<span class="chip day">day stop</span>`;
     const d=dateOf(s._day);
-    items+=`<li class="stop ${S.open===s.id?"sel":""}" data-id="${s.id}">
+    items+=`<li class="stop ${S.open===s.id?"sel":""}${isOpt(s)?" optstop":""}" data-id="${s.id}">
       <button class="stop-head" data-act="toggle" aria-expanded="${S.open===s.id}">
-        <span class="daybox"><b>Day ${s._day}</b>${d||"&nbsp;"}</span>
-        <span class="sname"><span class="snum">${i+1}</span>${esc(s.name)}</span>${chip}
+        <span class="daybox">${isOpt(s)?`<b style="color:var(--muted)">Optional</b>not in route`:`<b>Day ${s._day}</b>${d||"&nbsp;"}`}</span>
+        <span class="sname">${isOpt(s)?"":`<span class="snum">${NUM[s.id]}</span>`}${esc(s.name)}</span>${chip}
         <span class="ssub">${h.length?esc(h.map(x=>x.n).join(" · ")):(esc(s.notes)||"No highlights yet")}</span>
       </button>${S.open===s.id?stopEditor(s):""}</li>`;
   });
@@ -560,7 +564,7 @@ function renderSurf(){
   const groups=new Map();
   vis.forEach(sp=>{const nr=nearestStop(sp),k=nr?nr.s.id:"_none";if(!groups.has(k))groups.set(k,{nr,items:[]});groups.get(k).items.push(sp)});
   const ordered=[...groups.values()].sort((a,b)=>(a.nr?a.nr.i:1e9)-(b.nr?b.nr.i:1e9));
-  const list=ordered.map(g=>`<div class="section-h" style="padding:12px 0 6px"><h3 style="font-size:17px">${g.nr?`<span class="snum">${g.nr.i+1}</span>Near ${esc(g.nr.s.name)}`:"Other spots"}</h3><span class="note">${g.items.length} spot${g.items.length>1?"s":""}</span></div>
+  const list=ordered.map(g=>`<div class="section-h" style="padding:12px 0 6px"><h3 style="font-size:17px">${g.nr?`${isOpt(g.nr.s)?"":`<span class="snum">${routeNums()[g.nr.s.id]}</span>`}Near ${esc(g.nr.s.name)}`:"Other spots"}</h3><span class="note">${g.items.length} spot${g.items.length>1?"s":""}</span></div>
     <ul class="log" style="gap:8px">${g.items.sort((a,b)=>(nearestStop(a)?.km||0)-(nearestStop(b)?.km||0)).map(surfCard).join("")}</ul>`).join("");
   const chips=(cur,act,opts)=>`<div class="row" role="group">${opts.map(([v,l])=>`<button class="fchip ${v===cur?"on":""}" data-act="${act}" data-v="${v}" aria-pressed="${v===cur}">${l}</button>`).join("")}</div>`;
   const empty=S.surf.length?`<div class="empty">No spots match these filters.</div>`:
