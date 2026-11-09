@@ -4,8 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Western Australia 2027</title>
-<meta name="theme-color" content="#0E1A20">
-<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#15132A" id="themecolor">
+<meta name="color-scheme" content="dark light">
+<script>try{const t=localStorage.getItem("wa-theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch(_){}</script>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
@@ -15,16 +16,29 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght,SOFT@0,9..144,600,100;1,9..144,500,100&family=Nunito+Sans:opsz,wght@6..12,400;6..12,700&display=swap">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
-/* Layout: travel-journal app; ocean-at-night header, full-width route map, stop list below. Single dark theme ("Indian Ocean night"). */
+/* Layout: travel-journal app; header, full-width route map, stop list below. Theme "Sunset coast": dark (dusk) and light (day), following the system unless chosen. */
 :root{
-  --bg:#0E1A20; --surface:#15252C; --ink:#E6F0F1; --muted:#9FB6BB; --line:#24363D;
-  --ocean:#4FB3C2; --ocean-ink:#062027; --ocean-soft:#0F2A35; --earth:#F08A6C; --earth-ink:#2B0F06; --earth-soft:#3E2219; --warn:#E9B44C; --warn-soft:#33290F;
-  --sun:#F08A6C; --dune1:#123039; --dune2:#17414C; --dune3:#1F5764;
+  --bg:#15132A; --surface:#201D3A; --ink:#F1EEF8; --muted:#A39CC4; --line:#322E52;
+  --ocean:#6FD6C8; --ocean-ink:#0B2622; --ocean-soft:#1D3B44; --earth:#FF9E6B; --earth-ink:#2E1305; --earth-soft:#3E2A3A; --warn:#F2C14E; --warn-ink:#2A1E05; --warn-soft:#3A3020;
+  --sun:#FF9E6B; --dune1:#1E1B38; --dune2:#29254A; --dune3:#36315E;
+  --lv-beg-bg:#173A2E; --lv-beg:#7FD1AE; --lv-adv-bg:#3A1A1A; --lv-adv:#F09090; --veil:rgba(21,19,42,.82);
   --display:"Fraunces", Georgia, "Times New Roman", serif;
   --body:"Nunito Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
   --mono:"Nunito Sans", system-ui, sans-serif;
   color-scheme:dark;
 }
+@media (prefers-color-scheme: light){:root:not([data-theme="dark"]){
+  --bg:#F6F4FA; --surface:#FFFFFF; --ink:#1E1A33; --muted:#6B6588; --line:#E3DFEE;
+  --ocean:#0E8478; --ocean-ink:#FFFFFF; --ocean-soft:#DDF2EE; --earth:#E2652F; --earth-ink:#FFFFFF; --earth-soft:#FDE5D8; --warn:#B07300; --warn-ink:#FFFFFF; --warn-soft:#FBEFD0;
+  --sun:#FF9E6B; --dune1:#E6E1F3; --dune2:#D3CBEC; --dune3:#BDB2E2;
+  --lv-beg-bg:#DDF3E8; --lv-beg:#1D7A52; --lv-adv-bg:#FBE1E1; --lv-adv:#B23A3A; --veil:rgba(255,255,255,.85);
+  color-scheme:light}}
+:root[data-theme="light"]{
+  --bg:#F6F4FA; --surface:#FFFFFF; --ink:#1E1A33; --muted:#6B6588; --line:#E3DFEE;
+  --ocean:#0E8478; --ocean-ink:#FFFFFF; --ocean-soft:#DDF2EE; --earth:#E2652F; --earth-ink:#FFFFFF; --earth-soft:#FDE5D8; --warn:#B07300; --warn-ink:#FFFFFF; --warn-soft:#FBEFD0;
+  --sun:#FF9E6B; --dune1:#E6E1F3; --dune2:#D3CBEC; --dune3:#BDB2E2;
+  --lv-beg-bg:#DDF3E8; --lv-beg:#1D7A52; --lv-adv-bg:#FBE1E1; --lv-adv:#B23A3A; --veil:rgba(255,255,255,.85);
+  color-scheme:light}
 *{box-sizing:border-box}
 body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15.5px;line-height:1.55;font-variant-numeric:tabular-nums;
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:16px 48px}
@@ -88,7 +102,7 @@ button{font:inherit;cursor:pointer}
 .leaflet-top.leaflet-right{display:flex;flex-direction:row-reverse;align-items:flex-start;gap:8px;margin-right:10px}
 .leaflet-top.leaflet-right .leaflet-control{margin:10px 0 0 0;float:none;clear:none}
 .surftoggle{display:flex;align-items:center;gap:6px;height:36px;padding:0 14px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--muted);font:inherit;font-weight:700;font-size:12.5px;cursor:pointer}
-.surftoggle.on{background:var(--warn);border-color:var(--warn);color:#2A1E05}
+.surftoggle.on{background:var(--warn);border-color:var(--warn);color:var(--warn-ink)}
 .surftoggle:focus-visible{outline:2px solid var(--earth);outline-offset:2px}
 .leaflet-control-layers{height:36px;display:flex;align-items:center}
 .leaflet-control-layers-list{display:flex;flex-wrap:wrap;gap:2px;align-items:center}
@@ -97,17 +111,17 @@ button{font:inherit;cursor:pointer}
 .leaflet-control-layers-overlays label{margin:0}
 .leaflet-control-layers-overlays input{position:absolute;opacity:0;pointer-events:none}
 .leaflet-control-layers-overlays label span span{display:block;padding:5px 12px;border-radius:999px;font-weight:700;font-size:12.5px;color:var(--muted);cursor:pointer}
-.leaflet-control-layers-overlays input:checked+span{background:var(--warn);border-radius:999px;color:#2A1E05}
-.leaflet-control-layers-overlays input:checked+span span{color:#2A1E05}
+.leaflet-control-layers-overlays input:checked+span{background:var(--warn);border-radius:999px;color:var(--warn-ink)}
+.leaflet-control-layers-overlays input:checked+span span{color:var(--warn-ink)}
 .leaflet-control-layers-overlays input:focus-visible+span{outline:2px solid var(--earth);outline-offset:1px}
 .surfpin{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--warn);color:#2A1E05;border:2px solid var(--bg);box-sizing:border-box;cursor:pointer}
-.chip.lv-beginner{background:#173A2E;color:#7FD1AE}
+.chip.lv-beginner{background:var(--lv-beg-bg);color:var(--lv-beg)}
 .chip.lv-intermediate{background:var(--warn-soft);color:var(--warn)}
-.chip.lv-advanced{background:#3A1A1A;color:#F09090}
+.chip.lv-advanced{background:var(--lv-adv-bg);color:var(--lv-adv)}
 .surfpin.lvl-beginner{background:#7FD1AE}
 .surfpin.lvl-advanced{background:#E06A6A}
 #lmap.placing{cursor:crosshair}
-.btn.small.on{background:var(--warn);color:#2A1E05;border-color:var(--warn)}
+.btn.small.on{background:var(--warn);color:var(--warn-ink);border-color:var(--warn)}
 .sfpop .leaflet-popup-content-wrapper,.sfpop .leaflet-popup-tip{background:var(--surface);color:var(--ink);box-shadow:none;border:1px solid var(--line)}
 .sfpop .leaflet-popup-content{margin:12px}
 .sfpop a.leaflet-popup-close-button{color:var(--muted)}
@@ -118,7 +132,7 @@ button{font:inherit;cursor:pointer}
 .leaflet-bar a{background:var(--surface);color:var(--ink);border-bottom-color:var(--line)}
 .leaflet-bar a:hover{background:var(--line);color:var(--ink)}
 .leaflet-bar{border:1px solid var(--line)!important}
-.leaflet-control-attribution{background:rgba(14,26,32,.8)!important;color:var(--muted)}
+.leaflet-control-attribution{background:var(--veil)!important;color:var(--muted)}
 .leaflet-control-attribution a{color:var(--ocean)}
 .num{display:flex;align-items:center;justify-content:center;height:26px;border-radius:999px;font-family:var(--body);font-weight:700;font-size:12.5px;line-height:1;white-space:nowrap;border:2px solid var(--surface);box-sizing:border-box;cursor:pointer}
 .num.base{background:var(--earth);color:var(--earth-ink)}
@@ -220,6 +234,9 @@ body{margin:0}
 .acct summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:6px}
 .acct summary::-webkit-details-marker{display:none}
 .acct summary::after{content:"▾";color:var(--muted);font-size:12px}
+.seg{display:flex;gap:2px;background:var(--bg);border:1px solid var(--line);border-radius:999px;padding:2px}
+.seg button{flex:1;border:0;background:transparent;color:var(--muted);font:inherit;font-size:12.5px;font-weight:700;padding:5px 10px;border-radius:999px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--ocean);color:var(--ocean-ink)}
 .acctmenu{position:absolute;right:0;top:calc(100% + 6px);z-index:40;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px;display:grid;gap:8px;min-width:240px}
 @media (max-width:860px){
   #auth.compact{position:absolute;top:14px;right:14px;z-index:5}
