@@ -266,10 +266,11 @@ body{margin:0}
 .rhead .daybox{grid-row:span 2}
 @media (max-width:600px){.sname{font-size:17px}.daybox{min-width:50px;padding-right:10px}.daybox b{font-size:15px}}
 .stop.optstop{margin:6px 0 6px 44px}
-.stop-head.ohead{grid-template-columns:auto minmax(0,1fr);gap:0 10px;padding:7px 12px}
+.stop-head.ohead{grid-template-columns:auto minmax(0,1fr) auto;gap:0 10px;padding:7px 12px}
+.ohead .chip.opt{font-size:11px;padding:1px 8px;align-self:start}
 .ohead .obadge{grid-row:span 2;width:24px;height:24px;border-radius:50%;border:1.5px dashed var(--muted);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--muted)}
 .ohead .sname{font-family:var(--body);font-size:14.5px;font-weight:700}
-.ohead .ssub{grid-column:2;font-size:12.5px}
+.ohead .ssub{grid-column:2/4;font-size:12.5px}
 .leg .dirlink{margin-left:auto;font-style:normal}
 .addbar{margin-top:16px}
 /* Map: smaller markers and arrows when zoomed out */
