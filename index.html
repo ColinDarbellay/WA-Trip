@@ -43,8 +43,15 @@ h2{font-size:21px}
 .stat{background:var(--bg);border-radius:999px;padding:5px 13px}
 .stat b{font-weight:700;font-size:15px}
 .stat span{color:var(--muted);font-size:13px;margin-left:4px}
-.dates{display:grid;grid-template-columns:repeat(4,minmax(0,170px));gap:10px}
-@media (max-width:600px){.dates{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.dates{display:grid;gap:8px;min-width:0}
+.top>*{min-width:0}
+.drow{min-width:0}
+.drow{display:flex;align-items:center;gap:8px;flex-wrap:nowrap}
+.dlab{width:76px;flex:none;font-size:13.5px;color:var(--muted)}
+.dash{color:var(--muted);flex:none}
+.drow input[type=date]{-webkit-appearance:none;appearance:none;width:0;min-width:0;max-width:150px;flex:1 1 0;height:38px;padding:6px 10px;font-size:15px;line-height:1.2;text-align:left}
+.drow input[type=date]::-webkit-date-and-time-value{text-align:left}
+@media (max-width:420px){.dlab{width:62px;font-size:13px}.drow{gap:5px}.drow input[type=date]{padding:6px 6px;font-size:14px}.drow input[type=date]::-webkit-calendar-picker-indicator{display:none}}
 #datesum:empty{display:none}
 #datesum .warn{color:var(--warn)}
 .start{display:flex;gap:8px;align-items:center;font-size:13.5px;color:var(--muted)}
@@ -209,10 +216,8 @@ body{margin:0}
     <div class="stats" id="stats"></div>
     <div id="auth"></div>
     <div class="dates">
-      <label class="f" for="startDate">Arrival in Perth<input id="startDate" type="date" data-f="start" data-scope="settings"></label>
-      <label class="f" for="rtStart">Road trip start<input id="rtStart" type="date" data-f="rtStart" data-scope="settings"></label>
-      <label class="f" for="rtEnd">Road trip end<input id="rtEnd" type="date" data-f="rtEnd" data-scope="settings"></label>
-      <label class="f" for="departDate">Departure from Perth<input id="departDate" type="date" data-f="depart" data-scope="settings"></label>
+      <div class="drow"><span class="dlab">Stay</span><input id="startDate" type="date" data-f="start" data-scope="settings" aria-label="Arrival in Perth"><span class="dash">–</span><input id="departDate" type="date" data-f="depart" data-scope="settings" aria-label="Departure from Perth"></div>
+      <div class="drow"><span class="dlab">Road trip</span><input id="rtStart" type="date" data-f="rtStart" data-scope="settings" aria-label="Road trip start"><span class="dash">–</span><input id="rtEnd" type="date" data-f="rtEnd" data-scope="settings" aria-label="Road trip end"></div>
     </div>
     <div class="note" id="datesum"></div>
   </header>
