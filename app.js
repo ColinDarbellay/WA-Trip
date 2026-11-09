@@ -267,7 +267,7 @@ function renderRoute(){
     items+=isOpt(s)?`<li class="stop ${S.open===s.id?"sel":""} optstop" data-id="${s.id}">
       <button class="stop-head ohead" data-act="toggle" aria-expanded="${S.open===s.id}">
         <span class="obadge" aria-hidden="true">O</span><span class="sname">${esc(s.name)}</span>
-        <span class="ssub">Optional · not in route${hasXY(s)?"":" · no location"}${h.length||s.notes?" · "+sub:""}</span>
+        <span class="ssub">${hasXY(s)?"":"No location · "}${sub}</span>
       </button>${S.open===s.id?stopEditor(s):""}</li>`:`<li class="stop ${S.open===s.id?"sel":""}" data-id="${s.id}">
       <button class="stop-head rhead" data-act="toggle" aria-expanded="${S.open===s.id}">
         <span class="daybox"><b>Day ${s._day}</b>${d||"&nbsp;"}</span>
