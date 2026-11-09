@@ -124,7 +124,7 @@ let MAP=null,LAYER=null,SURF=null;S.surf=[];S.surfMode=false;S.openSurf=null;S.s
 const WAVES=["point","reef","beach"],LEVELS=["beginner","intermediate","advanced"];
 const mapEl=document.createElement("div");mapEl.id="lmap";
 const tok=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
-function mountMap(){
+function mountMap(){mapEl.classList.toggle("surftab",S.tab==="surf");
   const slot=document.getElementById("mapslot");if(!slot)return;slot.appendChild(mapEl);
   if(!window.L){mapEl.innerHTML=`<div class="empty">The map needs an internet connection the first time it loads.</div>`;return}
   if(!MAP){
@@ -132,7 +132,8 @@ function mountMap(){
     const OSM='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',RT=' · routes <a href="https://valhalla.github.io/valhalla/">Valhalla</a> (FOSSGIS)';
     const ESRI="https://server.arcgisonline.com/ArcGIS/rest/services/";
     const STYLES={
-      "Map":L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:OSM+RT}),
+      "Map":(window.maplibregl&&L.maplibreGL)?L.maplibreGL({style:"https://tiles.openfreemap.org/styles/liberty",attribution:'<a href="https://openfreemap.org">OpenFreeMap</a> &copy; <a href="https://www.openmaptiles.org/">OpenMapTiles</a> '+OSM+RT})
+        :L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:OSM+RT}),
       "Satellite":L.layerGroup([
         L.tileLayer(ESRI+"World_Imagery/MapServer/tile/{z}/{y}/{x}",{maxZoom:19,attribution:'Imagery &copy; Esri, Maxar, Earthstar Geographics · labels &copy; Esri, HERE, Garmin, OpenStreetMap'+RT}),
         L.tileLayer(ESRI+"Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}",{maxZoom:19,opacity:.85}),
@@ -141,8 +142,10 @@ function mountMap(){
     };
     let pick="Map";try{const v=localStorage.getItem("wa-map");if(v&&STYLES[v])pick=v}catch(_){}
     STYLES[pick].addTo(MAP);
-    const CTRL=L.control.layers(STYLES,null,{position:"topright",collapsed:false}).addTo(MAP);
-    MAP.on("baselayerchange",e=>{try{localStorage.setItem("wa-map",e.name)}catch(_){}});
+    const CTRL=L.control.layers(STYLES,null,{position:"bottomleft",collapsed:false}).addTo(MAP);
+    const GLATT='<a href="https://openfreemap.org">OpenFreeMap</a> &copy; <a href="https://www.openmaptiles.org/">OpenMapTiles</a> '+OSM+RT,isGL=!!(window.maplibregl&&L.maplibreGL);
+    if(isGL&&pick==="Map")MAP.attributionControl.addAttribution(GLATT);
+    MAP.on("baselayerchange",e=>{try{localStorage.setItem("wa-map",e.name)}catch(_){}if(isGL){e.name==="Map"?MAP.attributionControl.addAttribution(GLATT):MAP.attributionControl.removeAttribution(GLATT)}});
     LAYER=L.layerGroup().addTo(MAP);
     const pts=S.stops.filter(hasXY).map(s=>[s.lat,s.lon]);
     pts.length?MAP.fitBounds(pts,{padding:[24,24]}):MAP.setView([-31.95,115.86],6);
@@ -299,7 +302,7 @@ function renderRoute(){
         <div class="row"><button class="btn" type="submit" ${S.ro?"disabled":""}>Add stop</button><span class="note" id="as-err"></span></div>
       </form>`}
     </div></div>`;
-  mountMap();if(SURF&&MAP){const want=surfPref();if(want&&!MAP.hasLayer(SURF))SURF.addTo(MAP);if(!want&&MAP.hasLayer(SURF))MAP.removeLayer(SURF)}
+  mountMap();if(MAP&&LAYER&&!MAP.hasLayer(LAYER))LAYER.addTo(MAP);if(SURF&&MAP){const want=surfPref();if(want&&!MAP.hasLayer(SURF))SURF.addTo(MAP);if(!want&&MAP.hasLayer(SURF))MAP.removeLayer(SURF)}
   clearTimeout(RQ.t);RQ.t=setTimeout(fetchRoutes,800);
 }
 function renderBudget(){
@@ -487,6 +490,14 @@ function setupSurf(ctrl){
     b.addEventListener("click",()=>{const on=!MAP.hasLayer(SURF);on?SURF.addTo(MAP):MAP.removeLayer(SURF);if(S.tab!=="surf"){try{localStorage.setItem("wa-surf-route",on?"on":"off")}catch(_){}}sync()});
     MAP.on("layeradd layerremove",e=>{if(e.layer===SURF)sync()});sync();return b}});
   new SurfCtl().addTo(MAP);
+  const RouteCtl=L.Control.extend({options:{position:"topright"},onAdd(){
+    const b=L.DomUtil.create("button","surftoggle routetoggle");b.type="button";
+    const sync=()=>{const on=MAP.hasLayer(LAYER);b.classList.toggle("on",on);b.setAttribute("aria-pressed",on);b.innerHTML=`<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 19a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM18 9a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM8 17h7.5a3.5 3.5 0 0 0 0-7h-7a3.5 3.5 0 0 1 0-7H16"/></svg><span>Route</span>`};
+    L.DomEvent.disableClickPropagation(b);
+    b.addEventListener("click",()=>{const on=!MAP.hasLayer(LAYER);on?LAYER.addTo(MAP):MAP.removeLayer(LAYER);S.routeHidden=!on;sync()});
+    MAP.on("layeradd layerremove",e=>{if(e.layer===LAYER)sync()});sync();return b}});
+  new RouteCtl().addTo(MAP);
+  const zc=()=>{const z=MAP.getZoom();mapEl.classList.toggle("z9",z>=9)};MAP.on("zoomend",zc);zc();
   MAP.on("contextmenu",e=>addSpotAt(e.latlng));
   MAP.on("click",e=>{if(S.surfMode){S.surfMode=false;mapEl.classList.remove("placing");updateSurfBtn();addSpotAt(e.latlng)}});
   let t=null,start=null;
@@ -523,7 +534,7 @@ function drawSurf(){
   S.surf.forEach(sp=>{if(typeof sp.lat!=="number")return;
     const m=L.marker([sp.lat,sp.lon],{draggable:!S.ro,title:sp.name,zIndexOffset:-500,
       icon:L.divIcon({className:"",iconSize:[28,28],iconAnchor:[14,14],popupAnchor:[0,-12],html:`<div class="surfpin lvl-${esc(sp.level)}">${WAVE_SVG}</div>`})}).addTo(SURF);
-    m.bindTooltip(`${esc(sp.name)} · ${esc(sp.wave)} · ${esc(sp.level)}`,{direction:"top",offset:[0,-12],className:"tip"});
+    m.bindTooltip(`${esc(sp.name)}`,{permanent:true,direction:"right",offset:[14,0],className:"sflabel",interactive:false});
     m.bindPopup(()=>surfPopup(sp),{className:"sfpop",minWidth:280,maxWidth:320,autoPanPadding:[20,20]});
     m._sid=sp.id;m.on("popupopen",()=>{SURF._openId=sp.id;if(S.tab==="surf"&&S.sfOpen!==sp.id){S.sfOpen=sp.id;S.sfConfirm=null;schedule();setTimeout(()=>{const li=app.querySelector(`li[data-sid="${sp.id}"]`);li&&li.scrollIntoView({block:"nearest"})},50)}});
     m.on("popupclose",()=>{if(SURF._openId===sp.id)SURF._openId=null;S.sfConfirm=null});
@@ -610,6 +621,7 @@ function renderSurf(){
     </div></div>`;
   mountMap();
   if(SURF&&!MAP.hasLayer(SURF))SURF.addTo(MAP);
+  if(MAP&&LAYER){if(S.routeHidden&&MAP.hasLayer(LAYER))MAP.removeLayer(LAYER);if(!S.routeHidden&&!MAP.hasLayer(LAYER))LAYER.addTo(MAP)}
 }
 function fitSurf(){const pts=S.surf.filter(x=>typeof x.lat==="number").map(x=>[x.lat,x.lon]);if(MAP&&pts.length)MAP.fitBounds(pts,{padding:[30,30]})}
 function openSpotOnMap(id){const sp=S.surf.find(x=>x.id===id);if(!sp||!MAP)return;if(SURF&&!MAP.hasLayer(SURF))SURF.addTo(MAP);
