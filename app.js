@@ -127,10 +127,10 @@ function mountMap(){
     const OSM='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',RT=' · routes <a href="https://project-osrm.org">OSRM</a>';
     const ESRI="https://server.arcgisonline.com/ArcGIS/rest/services/";
     const STYLES={
-      "Map":L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,tileSize:512,zoomOffset:-1,minZoom:2,attribution:OSM+RT}),
+      "Map":L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:OSM+RT}),
       "Satellite":L.layerGroup([
         L.tileLayer(ESRI+"World_Imagery/MapServer/tile/{z}/{y}/{x}",{maxZoom:19,attribution:'Imagery &copy; Esri, Maxar, Earthstar Geographics · labels &copy; Esri, HERE, Garmin, OpenStreetMap'+RT}),
-        L.tileLayer(ESRI+"Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}",{maxZoom:19,tileSize:512,zoomOffset:-1,minZoom:2,opacity:.85}),
+        L.tileLayer(ESRI+"Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}",{maxZoom:19,opacity:.85}),
         L.tileLayer(ESRI+"Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}",{maxZoom:19,tileSize:512,zoomOffset:-1,minZoom:2})
       ])
     };
