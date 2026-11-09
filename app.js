@@ -307,7 +307,7 @@ function renderPacking(){
   const blocks=groups.map(g=>{const its=vis.filter(p=>(p.group||"Other")===g).sort((a,b)=>(a.text||"").localeCompare(b.text||""));
     if(!its.length)return"";
     return `<div class="panel"><div class="section-h" style="padding:0"><h2>${esc(g)}</h2><span class="note">${its.filter(i=>i.done).length}/${its.length} packed</span></div>
-      <ul class="pack">${its.map(p=>`<li class="${p.done?"done":""}" data-pid="${p.id}"><input type="checkbox" id="pk-${p.id}" data-f="done" ${p.done?"checked":""} ${dis}><label for="pk-${p.id}"><span>${esc(p.text)}</span></label>
+      <ul class="pack">${its.map(p=>`<li class="${p.done?"done":""}" data-pid="${p.id}"><input type="checkbox" id="pk-${p.id}" data-f="done" ${p.done?"checked":""} ${dis}><input class="ptext" id="pt-${p.id}" data-f="ptext" value="${esc(p.text)}" ${dis} aria-label="Item name">
         <span class="row" style="gap:6px;flex-wrap:nowrap"><select class="who who-${whoOf(p)}" data-f="who" ${dis} aria-label="Who it's for">${WHO.map(x=>`<option ${x===whoOf(p)?"selected":""}>${x}</option>`).join("")}</select><button class="x" data-act="pdel" ${dis} aria-label="Remove ${esc(p.text)}">✕</button></span></li>`).join("")}</ul></div>`}).join("");
   const filt=`<div class="row" role="group" aria-label="Show items for">${["All",...WHO].map(x=>`<button class="fchip ${x===f?"on":""} who-${x}" data-act="who" data-who="${x}" aria-pressed="${x===f}">${x} <span>${cnt(x)}</span></button>`).join("")}</div>`;
   app.innerHTML=`<div style="display:grid;gap:14px;max-width:760px">
@@ -362,7 +362,8 @@ document.addEventListener("change",async e=>{
   const bid=el.closest("[data-bid]")?.dataset.bid;
   if(bid){await w("budget/"+bid,{[f]:f==="amount"?Number(el.value)||0:el.value});return}
   const pid=el.closest("[data-pid]")?.dataset.pid;
-  if(pid){await w("packing/"+pid,f==="who"?{who:el.value}:{done:el.checked});return}
+  if(pid){if(f==="ptext"){const t=el.value.trim();if(!t){toast("An item needs a name");el.value=(S.packing.find(x=>x.id===pid)||{}).text||"";return}await w("packing/"+pid,{text:t});return}
+    await w("packing/"+pid,f==="who"?{who:el.value}:{done:el.checked});return}
   const s=cur();if(!s)return;
   if(f==="hk"||f==="hn"){const h=(s.highlights||[]).map(x=>({...x}));const i=+el.dataset.i;if(!h[i])return;h[i][f==="hk"?"k":"n"]=el.value;await w("stops/"+s.id,{highlights:h});return}
   if(f==="coords"){const xy=parseXY(el.value);if(!xy){toast("Use the format -33.95, 115.07");return}await w("stops/"+s.id,{...xy,roadFor:""});return}
@@ -673,6 +674,8 @@ document.addEventListener("submit",async e=>{
   await w("notes/"+id,{title,body,updated:new Date().toISOString(),by:Store.user?Store.user.email.split("@")[0]:""},"set");
   ["an-t","an-b"].forEach(x=>{const f=document.getElementById(x);if(f)f.value=""});toast("Note added");
 });
+
+document.addEventListener("keydown",e=>{if(e.key==="Enter"&&e.target.classList&&e.target.classList.contains("ptext")){e.preventDefault();e.target.blur()}});
 
 (async()=>{
   try{const v=localStorage.getItem("wa-who");if(v&&["All",...WHO].includes(v))S.who=v}catch(_){}

@@ -165,7 +165,10 @@ label.f{display:grid;gap:4px;font-size:12.5px;color:var(--muted)}
 .scroll{overflow-x:auto}
 .pack{list-style:none;margin:0;padding:0;display:grid;gap:2px}
 .pack li{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:center;padding:7px 0;border-bottom:1px solid var(--line)}
-.pack li.done span{text-decoration:line-through;color:var(--muted)}
+.pack li.done .ptext{text-decoration:line-through;color:var(--muted)}
+.ptext{background:transparent;border:1px solid transparent;padding:5px 8px;border-radius:8px}
+.ptext:hover{border-color:var(--line)}
+.ptext:focus{background:var(--bg);border-color:var(--line)}
 .pack input[type=checkbox]{width:20px;height:20px;accent-color:var(--earth)}
 .fchip{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:6px 14px;font-weight:700}
 .fchip span{font-weight:400;color:var(--muted);margin-left:4px;font-size:12.5px}
