@@ -43,12 +43,15 @@ function renderStats(){
   document.getElementById("stats").innerHTML=
     `
      <div class="stat"><b>≈${c.km.toLocaleString("en-AU")}</b><span>km driving</span></div>
-     <div class="stat"><b>${S.stops.length}</b><span>stops</span></div>
+     <div class="stat"><b>${S.stops.filter(x=>!isOpt(x)).length}</b><span>stops</span></div>
      <div class="stat"><b>${money(planned)}</b><span>budget</span></div>
      <div class="stat"><b>${done}/${S.packing.length}</b><span>packed</span></div>`;
   [["startDate","start"],["rtStart","rtStart"],["rtEnd","rtEnd"],["departDate","depart"]].forEach(([id,k])=>{const el=document.getElementById(id);if(!el)return;if(document.activeElement!==el)el.value=S.settings[k]||"";el.disabled=S.ro});
   const nn=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v==null||v<0?"":`${v} night${v===1?"":"s"}`};
   nn("n-stay",nightsBetween(S.settings.start,S.settings.depart));nn("n-rt",nightsBetween(S.settings.rtStart,S.settings.rtEnd));
+  const eb=document.getElementById("eyebrow");if(eb){const st=S.settings,f=st.rtStart||st.start,t=st.rtEnd||st.depart;let txt="Our camper adventure";
+    if(f&&t){const x=new Date(f+"T00:00:00"),y=new Date(t+"T00:00:00");if(!isNaN(x)&&!isNaN(y)){const m=d=>d.toLocaleDateString("en-GB",{month:"long"});txt+=" · "+(x.getMonth()===y.getMonth()&&x.getFullYear()===y.getFullYear()?m(x):m(x)+"–"+m(y))+" "+y.getFullYear()}}
+    eb.textContent=txt}
   const ds=document.getElementById("datesum");if(ds)ds.innerHTML=dateSummary(c.nights);
 }
 
@@ -104,13 +107,13 @@ function listen(){
     else Store.docs.set(Store.key(p.new.collection,p.new.id),p.new.data);
     Store.emit()}).subscribe();
 }
-function updateAuth(){
+function updateAuth(){const _el=document.getElementById("auth");if(_el)_el.classList.toggle("compact",!!(SB&&navigator.onLine&&Store.user&&Store.member&&!S.setPw));
   S.ro=!Store.user||!navigator.onLine||!Store.member;
   const el=document.getElementById("auth");if(!el)return;
   if(!SB){el.innerHTML=`<span class="note">Sync isn't set up yet: add your Supabase details to config.js (see README).</span>`;return}
   if(!navigator.onLine){el.innerHTML=`<span class="pill off">Offline</span><span class="note">Showing the last saved version. Editing comes back when you're online.</span>`;return}
   if(!Store.user){el.innerHTML=`<form id="login" class="row" style="gap:6px"><input id="lg-mail" type="email" required placeholder="Email" autocomplete="username" style="width:auto;flex:1;min-width:170px"><input id="lg-pw" type="password" required minlength="6" placeholder="Password" autocomplete="current-password" style="width:auto;flex:1;min-width:130px"><button class="btn" type="submit">Sign in</button><button class="btn ghost" type="button" data-act="signup">Create account</button></form>`;return}
-  el.innerHTML=S.setPw?`<form id="setpw" class="row" style="gap:6px"><input id="sp-pw" type="password" required minlength="6" placeholder="New password (min. 6)" autocomplete="new-password" style="width:auto;flex:1;min-width:170px"><button class="btn" type="submit">Save password</button><button class="btn ghost" type="button" data-act="setpwcancel">Cancel</button></form>`:Store.member?`<span class="pill on">Synced</span><span class="note">Signed in as ${esc(Store.user.email)}</span><button class="btn ghost" data-act="setpw">Set password</button><button class="btn ghost" data-act="logout">Sign out</button>`
+  el.innerHTML=S.setPw?`<form id="setpw" class="row" style="gap:6px"><input id="sp-pw" type="password" required minlength="6" placeholder="New password (min. 6)" autocomplete="new-password" style="width:auto;flex:1;min-width:170px"><button class="btn" type="submit">Save password</button><button class="btn ghost" type="button" data-act="setpwcancel">Cancel</button></form>`:Store.member?`<details class="acct"><summary><span class="pill on">Synced</span><span class="sr-only">Account</span></summary><div class="acctmenu"><span class="note">Signed in as ${esc(Store.user.email)}</span><div class="row" style="gap:6px"><button class="btn ghost small" data-act="setpw">Set password</button><button class="btn ghost small" data-act="logout">Sign out</button></div></div></details>`
     :`<span class="pill off">No access</span><span class="note">${esc(Store.user.email)} isn't on the members list yet.</span><button class="btn ghost" data-act="logout">Sign out</button>`;
 }
 
@@ -124,7 +127,7 @@ function mountMap(){
   if(!window.L){mapEl.innerHTML=`<div class="empty">The map needs an internet connection the first time it loads.</div>`;return}
   if(!MAP){
     MAP=L.map(mapEl,{zoomSnap:.5,tap:true,minZoom:2});
-    const OSM='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',RT=' · routes <a href="https://project-osrm.org">OSRM</a>';
+    const OSM='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',RT=' · routes <a href="https://valhalla.github.io/valhalla/">Valhalla</a> (FOSSGIS)';
     const ESRI="https://server.arcgisonline.com/ArcGIS/rest/services/";
     const STYLES={
       "Map":L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:OSM+RT}),
@@ -256,15 +259,20 @@ function renderRoute(){
   S.stops.forEach((s,i)=>{
     const p=prevRoute(i);
     if(p&&!isOpt(s)){const L=c.legs[i],km=L?L.km:null,a=L&&!L.real?"≈ ":"";
-      items+= L?`<li class="leg">${a}${km} km · ${a}${fmtMin(L.min)}${L.real?"":" (estimate)"}${km>400?' <span class="long">Long drive day</span>':""}${s.route&&s.route.v===2&&s.route.unpaved!==false?` <span class="long" title="${s.route.unpaved===null?"Route from a car router that may use unsealed roads":"No fully sealed road found for this leg"}">Unsealed road possible</span>`:""}${hasXY(p)&&hasXY(s)?` · <a href="${mapsLink(p,s)}" target="_blank" rel="noopener">Directions</a>`:""}</li>`:`<li class="leg">Add coordinates to see the distance</li>`}
+      items+= L?`<li class="leg"><span>${a}${km} km · ${a}${fmtMin(L.min)}${L.real?"":" (estimate)"}</span>${km>400?' <span class="long">Long drive</span>':""}${s.route&&s.route.v===2&&s.route.unpaved!==false?` <span class="long" title="${s.route.unpaved===null?"Route from a car router that may use unsealed roads":"No fully sealed road found for this leg"}">Unsealed road possible</span>`:""}${hasXY(p)&&hasXY(s)?`<a class="dirlink" href="${mapsLink(p,s)}" target="_blank" rel="noopener">Directions</a>`:""}</li>`:`<li class="leg">Add coordinates to see the distance</li>`}
     const n=Number(s.nights)||0,h=s.highlights||[];
     const chip=!hasXY(s)?`<span class="chip noloc">no location</span>`:s.kind==="optional"?`<span class="chip opt">optional</span>`:(n&&s.kind!=="day")?`<span class="chip ${s.nightsGuess?"guess":""}">${n} night${n>1?"s":""}</span>`:`<span class="chip day">day stop</span>`;
     const d=dateOf(s._day);
-    items+=`<li class="stop ${S.open===s.id?"sel":""}${isOpt(s)?" optstop":""}" data-id="${s.id}">
-      <button class="stop-head" data-act="toggle" aria-expanded="${S.open===s.id}">
-        <span class="daybox">${isOpt(s)?`<b style="color:var(--muted)">Optional</b>not in route`:`<b>Day ${s._day}</b>${d||"&nbsp;"}`}</span>
-        <span class="sname">${isOpt(s)?"":`<span class="snum">${NUM[s.id]}</span>`}${esc(s.name)}</span>${chip}
-        <span class="ssub">${h.length?esc(h.map(x=>x.n).join(" · ")):(esc(s.notes)||"No highlights yet")}</span>
+    const sub=h.length?esc(h.map(x=>x.n).join(" · ")):(esc(s.notes)||"No highlights yet");
+    items+=isOpt(s)?`<li class="stop ${S.open===s.id?"sel":""} optstop" data-id="${s.id}">
+      <button class="stop-head ohead" data-act="toggle" aria-expanded="${S.open===s.id}">
+        <span class="obadge" aria-hidden="true">O</span><span class="sname">${esc(s.name)}</span>
+        <span class="ssub">Optional · not in route${hasXY(s)?"":" · no location"}${h.length||s.notes?" · "+sub:""}</span>
+      </button>${S.open===s.id?stopEditor(s):""}</li>`:`<li class="stop ${S.open===s.id?"sel":""}" data-id="${s.id}">
+      <button class="stop-head rhead" data-act="toggle" aria-expanded="${S.open===s.id}">
+        <span class="daybox"><b>Day ${s._day}</b>${d||"&nbsp;"}</span>
+        <span class="sname"><span class="snum">${NUM[s.id]}</span>${esc(s.name)}</span>
+        <span class="ssub">${chip}<span class="sub">${sub}</span></span>
       </button>${S.open===s.id?stopEditor(s):""}</li>`;
   });
   const after=S.stops.map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join("");
@@ -273,8 +281,8 @@ function renderRoute(){
     <div>
       <div class="section-h"><h2>Stops &amp; drives</h2><span class="note">${c.days} days · road km, ≈ = estimate</span></div>${(()=>{const miss=S.stops.filter(x=>!hasXY(x));return miss.length?`<div class="status" style="margin-bottom:10px">${miss.length} stop${miss.length>1?"s have":" has"} no location yet: ${miss.map(x=>`<button class="linkbtn" data-act="fixloc" data-id="${x.id}">${esc(x.name)}</button>`).join(", ")}. Open it and pick the place from the search.</div>`:""})()}
       ${S.stops.length?`<ul class="log">${items}</ul>`:(Store.user&&Store.member&&!S.ro?`<div class="empty">No stops yet. <button class="btn" data-act="importseed">Load our saved route (25 stops)</button></div>`:`<div class="empty">${Store.user?"No stops yet. Add your arrival city below.":"Sign in at the top to load your trip."}</div>`)}
-      <form class="panel" id="addStop" style="margin-top:18px">
-        <h2>Add a stop</h2>
+      ${!S.addOpen?`<div class="addbar"><button class="btn" data-act="addopen" ${S.ro?"disabled":""}>+ Add stop</button></div>`:`<form class="panel" id="addStop" style="margin-top:18px">
+        <div class="row" style="justify-content:space-between"><h2>Add a stop</h2><button class="btn ghost small" type="button" data-act="addclose">Cancel</button></div>
         <div class="grid2">
           <label class="f geo">Name<input id="as-name" required placeholder="Search a place, e.g. Cervantes" autocomplete="off" role="combobox" aria-autocomplete="list" aria-controls="geo-list" aria-expanded="false"><ul id="geo-list" class="geolist" role="listbox" hidden></ul></label>
           <label class="f">Nights<input id="as-n" type="number" min="0" value="1"></label>
@@ -283,9 +291,10 @@ function renderRoute(){
         </div>
         <p class="note" style="margin:0">Type a place name and pick it from the list; the coordinates fill in by themselves. You can still paste coordinates or a full Google Maps link.</p>
         <div class="row"><button class="btn" type="submit" ${S.ro?"disabled":""}>Add stop</button><span class="note" id="as-err"></span></div>
-      </form>
+      </form>`}
     </div></div>`;
-  mountMap();clearTimeout(RQ.t);RQ.t=setTimeout(fetchRoutes,800);
+  mountMap();if(SURF&&MAP){const want=surfPref();if(want&&!MAP.hasLayer(SURF))SURF.addTo(MAP);if(!want&&MAP.hasLayer(SURF))MAP.removeLayer(SURF)}
+  clearTimeout(RQ.t);RQ.t=setTimeout(fetchRoutes,800);
 }
 function renderBudget(){
   const c=computed(),dis=S.ro?"disabled":"";
@@ -354,8 +363,11 @@ function parseXY(t){const m=String(t||"").match(/(-?\d{1,2}\.\d+)\s*,\s*(-?\d{1,
 
 document.addEventListener("click",async e=>{
   const el=e.target.closest("[data-act]");if(!el)return;const a=el.dataset.act;
-  if(a==="tab"){S.tab=el.dataset.tab;try{history.replaceState(null,"","#"+S.tab)}catch(_){location.hash=S.tab}render();return}
+  if(a==="tab"){S.tab=el.dataset.tab;try{history.replaceState(null,"","#"+S.tab)}catch(_){location.hash=S.tab}render();
+    if(matchMedia("(max-width:860px)").matches){const t=app.getBoundingClientRect().top+scrollY-12;if(scrollY>t)scrollTo({top:t})}return}
   if(a==="fixloc"){const id=el.dataset.id;S.open=id;S.confirm=null;render();setTimeout(()=>{const f=document.getElementById("sg-"+id);if(f){f.scrollIntoView({block:"center"});f.focus()}},60);return}
+  if(a==="addopen"){S.addOpen=true;render();setTimeout(()=>{const f=document.getElementById("as-name");if(f){f.scrollIntoView({block:"center"});f.focus()}},50);return}
+  if(a==="addclose"){S.addOpen=false;render();return}
   if(a==="stopsave"){commitEdits();S.open=null;S.confirm=null;render();toast("Saved");return}
   if(a==="toggle")commitEdits();
   if(a==="toggle"||a==="pick"){const id=el.closest("[data-id]").dataset.id;S.open=S.open===id&&a==="toggle"?null:id;S.confirm=null;if(a==="pick"&&S.tab!=="route"){S.tab="route"}render();if(a==="toggle"&&S.open&&MAP){const st=cur();if(st&&hasXY(st))MAP.panTo([st.lat,st.lon])}
@@ -406,7 +418,7 @@ document.addEventListener("submit",async e=>{
     if(after){const i=S.stops.findIndex(s=>s.id===after),n=S.stops[i+1];order=n?(S.stops[i].order+n.order)/2:S.stops[i].order+10}
     else order=(S.stops.length?S.stops[S.stops.length-1].order:0)+10;
     const nid=S.db.collection("stops").doc().id;const n=Math.max(0,Number(document.getElementById("as-n").value)||0);
-    await w("stops/"+nid,{name,nights:n,kind:n?"base":"day",order,highlights:[],notes:"",camp:"",...xy},"set");S.open=nid;toast(`Added ${name}`);return}
+    await w("stops/"+nid,{name,nights:n,kind:n?"base":"day",order,highlights:[],notes:"",camp:"",...xy},"set");S.open=nid;S.addOpen=false;toast(`Added ${name}`);return}
   if(id==="addCost"){const label=document.getElementById("ac-label").value.trim(),amount=Number(document.getElementById("ac-amt").value);if(!label)return;
     await w("budget/"+S.db.collection("budget").doc().id,{cat:document.getElementById("ac-cat").value,label,amount:amount||0},"set");return}
   if(id==="addPack"){const text=document.getElementById("ap-t").value.trim();if(!text)return;const g=document.getElementById("ap-g").value,wh=document.getElementById("ap-w").value;
@@ -456,15 +468,16 @@ document.addEventListener("click",async e=>{
 
 /* ---------- Surf spots: own collection, own map layer, not part of the route ---------- */
 const WAVE_SVG=`<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M3 15c2 0 2-2 4.5-2s2.5 2 4.5 2 2-2 4.5-2 2.5 2 4.5 2" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><path d="M5 10.5c1.2-3.2 4.2-5 7.6-4.6 1.9.2 3.2 1.4 3.4 2.9-1.6-.7-3.4-.3-4.4 1.1" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+function surfPref(){try{return localStorage.getItem("wa-surf-route")==="on"}catch(_){return false}}
 function setupSurf(ctrl){
   SURF=L.layerGroup();
-  let on=true;try{on=localStorage.getItem("wa-surf")!=="off"}catch(_){}
-  if(on)SURF.addTo(MAP);
+  if(S.tab==="surf"||surfPref())SURF.addTo(MAP);
+  const far=()=>mapEl.classList.toggle("far",MAP.getZoom()<7.5);MAP.on("zoomend",far);far();
   const SurfCtl=L.Control.extend({options:{position:"topright"},onAdd(){
     const b=L.DomUtil.create("button","surftoggle");b.type="button";
     const sync=()=>{const on=MAP.hasLayer(SURF);b.classList.toggle("on",on);b.setAttribute("aria-pressed",on);b.innerHTML=`${WAVE_SVG}<span>Surf spots</span>`};
     L.DomEvent.disableClickPropagation(b);
-    b.addEventListener("click",()=>{const on=!MAP.hasLayer(SURF);on?SURF.addTo(MAP):MAP.removeLayer(SURF);try{localStorage.setItem("wa-surf",on?"on":"off")}catch(_){}sync()});
+    b.addEventListener("click",()=>{const on=!MAP.hasLayer(SURF);on?SURF.addTo(MAP):MAP.removeLayer(SURF);if(S.tab!=="surf"){try{localStorage.setItem("wa-surf-route",on?"on":"off")}catch(_){}}sync()});
     MAP.on("layeradd layerremove",e=>{if(e.layer===SURF)sync()});sync();return b}});
   new SurfCtl().addTo(MAP);
   MAP.on("contextmenu",e=>addSpotAt(e.latlng));

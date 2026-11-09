@@ -211,6 +211,50 @@ select.who{width:auto;border-radius:999px;padding:3px 8px;font-size:12.5px;font-
 :root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 body{margin:0}
 [hidden]{display:none!important}
+
+/* Compact header + bottom tab bar on phones */
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.acct{position:relative}
+.acct summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:6px}
+.acct summary::-webkit-details-marker{display:none}
+.acct summary::after{content:"▾";color:var(--muted);font-size:12px}
+.acctmenu{position:absolute;right:0;top:calc(100% + 6px);z-index:40;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px;display:grid;gap:8px;min-width:240px}
+@media (max-width:860px){
+  #auth.compact{position:absolute;top:14px;right:14px;z-index:5}
+  #auth:not(.compact){justify-content:flex-start}
+  .top{padding:18px 16px 64px;gap:10px}
+  .tagline{display:none}
+  h1{font-size:clamp(26px,8vw,34px)}
+  .eyebrow{font-size:13.5px}
+  .top:has(#auth.compact) .eyebrow{padding-right:90px}
+  .top .sun{bottom:46px}
+  .top .land{height:80px}
+  .stat{padding:4px 11px}
+  .dlab{width:84px!important;font-size:12.5px!important}
+  nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:50;gap:0;justify-content:space-around;background:var(--surface);border-top:1px solid var(--line);
+    padding:6px max(8px,env(safe-area-inset-left,0px)) calc(6px + env(safe-area-inset-bottom,0px)) max(8px,env(safe-area-inset-right,0px));overflow:visible}
+  nav.tabs button{flex:1;border:0;border-radius:10px;padding:9px 2px;font-size:13.5px;background:transparent}
+  nav.tabs button[aria-current="true"]{background:var(--ocean-soft);color:var(--ocean)}
+  body{padding-bottom:calc(96px + env(safe-area-inset-bottom,0px))!important}
+}
+/* Stop list: compact cards */
+.stop-head.rhead{grid-template-columns:auto minmax(0,1fr);gap:4px 12px;padding:10px 13px}
+.rhead .ssub{grid-column:2;display:flex;align-items:center;gap:8px}
+.rhead .ssub .chip{flex:none;font-size:11.5px;padding:2px 8px}
+.rhead .ssub .sub{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rhead .daybox{grid-row:span 2}
+@media (max-width:600px){.sname{font-size:17px}.daybox{min-width:50px;padding-right:10px}.daybox b{font-size:15px}}
+.stop.optstop{margin:6px 0 6px 44px}
+.stop-head.ohead{grid-template-columns:auto minmax(0,1fr);gap:0 10px;padding:7px 12px}
+.ohead .obadge{grid-row:span 2;width:24px;height:24px;border-radius:50%;border:1.5px dashed var(--muted);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--muted)}
+.ohead .sname{font-family:var(--body);font-size:14.5px;font-weight:700}
+.ohead .ssub{grid-column:2;font-size:12.5px}
+.leg .dirlink{margin-left:auto;font-style:normal}
+.addbar{margin-top:16px}
+/* Map: smaller markers and arrows when zoomed out */
+#lmap.far .num{scale:.8}
+#lmap.far .arw svg{scale:.62}
+#lmap.far .surfpin{scale:.75}
 </style>
 </head>
 <body>
@@ -223,7 +267,7 @@ body{margin:0}
       <path d="M0 86 C90 66 160 84 240 76 C310 70 360 74 400 70 L400 110 L0 110Z" fill="var(--dune2)"/>
       <path d="M0 100 C80 90 170 104 260 96 C330 90 370 98 400 94 L400 110 L0 110Z" fill="var(--dune3)"/>
     </svg>
-    <div class="eyebrow">Our camper adventure · April–May 2027</div>
+    <div class="eyebrow" id="eyebrow">Our camper adventure</div>
     <h1>Western Australia 2027</h1>
     <p class="tagline">From Perth along the wild south coast to Esperance, then north past the Pinnacles to the dolphins of Shark Bay.</p>
     <div class="stats" id="stats"></div>
