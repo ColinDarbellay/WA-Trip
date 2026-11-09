@@ -165,6 +165,12 @@ label.f{display:grid;gap:4px;font-size:12.5px;color:var(--muted)}
 .notebody{min-height:180px;line-height:1.55}
 .notelinks{display:grid;gap:4px;font-size:14px}
 .notelinks a{color:var(--ocean);word-break:break-all}
+.geo{position:relative}
+.geolist{position:absolute;left:0;right:auto;width:max(100%,min(340px,calc(100vw - 64px)));top:100%;margin:4px 0 0;padding:4px;list-style:none;background:var(--surface);border:1px solid var(--line);border-radius:12px;z-index:30;max-height:300px;overflow:auto}
+.geolist li{display:grid;gap:1px;padding:8px 10px;border-radius:8px;cursor:pointer;color:var(--ink);font-size:14px}
+.geolist li span{color:var(--muted);font-size:12.5px}
+.geolist li.on,.geolist li[data-geo]:hover{background:var(--ocean-soft)}
+.geolist li.geoempty{cursor:default;color:var(--muted)}
 .actbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;border-top:1px solid var(--line);padding-top:12px}
 .confirm{background:var(--earth-soft);color:var(--earth);border-radius:12px;padding:10px 12px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .panel{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px;display:grid;gap:12px}

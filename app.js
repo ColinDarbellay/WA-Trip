@@ -269,12 +269,12 @@ function renderRoute(){
       <form class="panel" id="addStop" style="margin-top:18px">
         <h2>Add a stop</h2>
         <div class="grid2">
-          <label class="f">Name<input id="as-name" required placeholder="e.g. Cervantes"></label>
+          <label class="f geo">Name<input id="as-name" required placeholder="Search a place, e.g. Cervantes" autocomplete="off" role="combobox" aria-autocomplete="list" aria-controls="geo-list" aria-expanded="false"><ul id="geo-list" class="geolist" role="listbox" hidden></ul></label>
           <label class="f">Nights<input id="as-n" type="number" min="0" value="1"></label>
-          <label class="f">Coordinates or Maps link<input id="as-c" placeholder="-30.50, 115.07"></label>
+          <label class="f">Coordinates<input id="as-c" placeholder="Filled in when you pick a place"></label>
           <label class="f">Insert after<select id="as-after"><option value="">End of route</option>${after}</select></label>
         </div>
-        <p class="note" style="margin:0">In Google Maps, long-press a place and copy the coordinates shown at the top. Full browser links work too; short share links don't contain coordinates.</p>
+        <p class="note" style="margin:0">Type a place name and pick it from the list; the coordinates fill in by themselves. You can still paste coordinates or a full Google Maps link.</p>
         <div class="row"><button class="btn" type="submit" ${S.ro?"disabled":""}>Add stop</button><span class="note" id="as-err"></span></div>
       </form>
     </div></div>`;
@@ -688,6 +688,35 @@ document.addEventListener("submit",async e=>{
 });
 
 document.addEventListener("keydown",e=>{if(e.key==="Enter"&&e.target.classList&&e.target.classList.contains("ptext")){e.preventDefault();e.target.blur()}});
+
+/* Place search for new stops: Photon (komoot, OpenStreetMap data), limited to Western Australia */
+const GEO={t:null,ctl:null,items:[],sel:-1};
+function geoClose(){const l=document.getElementById("geo-list"),i=document.getElementById("as-name");if(l){l.hidden=true;l.innerHTML=""}if(i)i.setAttribute("aria-expanded","false");GEO.items=[];GEO.sel=-1}
+function geoLabel(p){const parts=[p.name,p.city&&p.city!==p.name?p.city:null,p.county,p.state].filter(Boolean);return [...new Set(parts)].join(", ")}
+const GEO_KIND={beach:"Beach",town:"Town",city:"City",village:"Village",hamlet:"Hamlet",suburb:"Suburb",national_park:"National park",protected_area:"Park",camp_site:"Campsite",caravan_site:"Caravan park",peak:"Peak",bay:"Bay",cape:"Cape",island:"Island",viewpoint:"Viewpoint",attraction:"Attraction",locality:"Place"};
+function geoPick(k){const f=GEO.items[k];if(!f)return;const [lon,lat]=f.geometry.coordinates,n=document.getElementById("as-name"),c=document.getElementById("as-c");
+  if(n)n.value=f.properties.name||n.value;if(c)c.value=`${lat.toFixed(5)}, ${lon.toFixed(5)}`;const err=document.getElementById("as-err");if(err)err.textContent="";geoClose();
+  if(MAP){MAP.setView([lat,lon],Math.max(MAP.getZoom(),10))}}
+function geoRender(){const l=document.getElementById("geo-list"),i=document.getElementById("as-name");if(!l)return;
+  if(!GEO.items.length){l.hidden=false;l.innerHTML=`<li class="geoempty">No places found in Western Australia</li>`;return}
+  l.innerHTML=GEO.items.map((f,k)=>{const p=f.properties,kind=GEO_KIND[p.osm_value]||"";return `<li role="option" id="geo-${k}" data-geo="${k}" aria-selected="${k===GEO.sel}" class="${k===GEO.sel?"on":""}"><b>${esc(p.name||"")}</b><span>${esc([kind,geoLabel(p).split(", ").slice(1).join(", ")].filter(Boolean).join(" · "))}</span></li>`}).join("");
+  l.hidden=false;if(i)i.setAttribute("aria-expanded","true")}
+async function geoSearch(q){
+  if(GEO.ctl)GEO.ctl.abort();GEO.ctl=new AbortController();
+  try{const r=await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=7&lang=en&bbox=112,-36,129.1,-13.5`,{signal:GEO.ctl.signal});if(!r.ok)throw 0;
+    const j=await r.json();GEO.items=(j.features||[]).filter(f=>f.properties&&f.properties.name);GEO.sel=-1;geoRender()}
+  catch(e){if(e&&e.name==="AbortError")return;const l=document.getElementById("geo-list");if(l){l.hidden=false;l.innerHTML=`<li class="geoempty">${navigator.onLine?"Place search isn't reachable right now. Enter coordinates instead.":"You're offline."}</li>`}}
+}
+document.addEventListener("input",e=>{if(e.target.id!=="as-name")return;const q=e.target.value.trim();const c=document.getElementById("as-c");if(c&&c.dataset.auto!=="0")c.value="";
+  clearTimeout(GEO.t);if(q.length<3){geoClose();return}GEO.t=setTimeout(()=>geoSearch(q),300)});
+document.addEventListener("input",e=>{if(e.target.id==="as-c")e.target.dataset.auto=e.target.value?"0":""});
+document.addEventListener("keydown",e=>{if(e.target.id!=="as-name"||!GEO.items.length)return;
+  if(e.key==="ArrowDown"){e.preventDefault();GEO.sel=(GEO.sel+1)%GEO.items.length;geoRender()}
+  else if(e.key==="ArrowUp"){e.preventDefault();GEO.sel=(GEO.sel-1+GEO.items.length)%GEO.items.length;geoRender()}
+  else if(e.key==="Enter"){e.preventDefault();geoPick(GEO.sel<0?0:GEO.sel)}
+  else if(e.key==="Escape"){geoClose()}});
+document.addEventListener("mousedown",e=>{const li=e.target.closest("[data-geo]");if(li){e.preventDefault();geoPick(+li.dataset.geo)}});
+document.addEventListener("click",e=>{const li=e.target.closest("[data-geo]");if(li){geoPick(+li.dataset.geo);return}if(!e.target.closest(".geo"))geoClose()});
 
 (async()=>{
   try{const v=localStorage.getItem("wa-who");if(v&&["All",...WHO].includes(v))S.who=v}catch(_){}
