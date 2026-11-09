@@ -638,18 +638,17 @@ function renderNotes(){
   const dis=S.ro?"disabled":"";
   const cats=[...new Set([...NOTE_CATS,...S.notes.map(n=>n.cat).filter(Boolean)])];
   const q=S.ntQ.trim().toLowerCase();
-  const vis=S.notes.filter(n=>(S.ntCat==="all"||(n.cat||"General")===S.ntCat)&&(!q||((n.title||"")+" "+(n.body||"")+" "+(n.cat||"")).toLowerCase().includes(q)))
+  const vis=S.notes.filter(n=>(!q||((n.title||"")+" "+(n.body||"")+" "+(n.cat||"")).toLowerCase().includes(q)))
     .sort((a,b)=>String(b.updated||"").localeCompare(String(a.updated||"")));
   const cnt=c=>S.notes.filter(n=>c==="all"||(n.cat||"General")===c).length;
   app.innerHTML=`<div style="display:grid;gap:14px;max-width:900px">
     <datalist id="nt-cats">${cats.map(c=>`<option value="${esc(c)}">`).join("")}</datalist>
     <div class="row" style="gap:8px"><input id="nt-q" type="search" placeholder="Search notes" value="${esc(S.ntQ)}" style="flex:1;min-width:180px;width:auto" aria-label="Search notes"></div>
-    <div class="row" role="group" aria-label="Topic">${["all",...cats].filter(c=>c==="all"||cnt(c)||NOTE_CATS.includes(c)).map(c=>`<button class="fchip ${c===S.ntCat?"on":""}" data-act="ntcat" data-v="${esc(c)}" aria-pressed="${c===S.ntCat}">${c==="all"?"All":esc(c)} <span>${cnt(c)}</span></button>`).join("")}</div>
     ${vis.length?`<ul class="log" style="gap:8px">${vis.map(noteCard).join("")}</ul>`:`<div class="empty">${S.notes.length?"No notes match.":"No notes yet. Write down what you find about the van, flights, surf or anything else, and Isabel sees it too."}</div>`}
     <form id="addNote" class="panel"><h2>New note</h2>
       <div class="grid2">
         <label class="f">Title<input id="an-t" required placeholder="e.g. Camper rental comparison"></label>
-        <label class="f">Topic<input id="an-c" list="nt-cats" value="${esc(S.ntCat==="all"?"General":S.ntCat)}" placeholder="Van, Flights, Surf…"></label>
+        <label class="f">Topic<input id="an-c" list="nt-cats" value="General" placeholder="Van, Flights, Surf…"></label>
       </div>
       <label class="f">Note<textarea id="an-b" class="notebody" placeholder="Paste what you found: prices, conditions, links…"></textarea></label>
       <div class="row"><button class="btn" type="submit" ${dis}>Add note</button><span class="note" id="an-err"></span></div>
