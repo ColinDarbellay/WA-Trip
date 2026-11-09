@@ -25,6 +25,14 @@ function dateOf(day){if(!S.settings.start)return"";const d=new Date(S.settings.s
 function mapsLink(a,b){return `https://www.google.com/maps/dir/?api=1&origin=${a.lat},${a.lon}&destination=${b.lat},${b.lon}&travelmode=driving`}
 function placeLink(s){return `https://www.google.com/maps/search/?api=1&query=${s.lat},${s.lon}`}
 
+function nightsBetween(a,b){if(!a||!b)return null;const x=new Date(a+"T00:00:00"),y=new Date(b+"T00:00:00");if(isNaN(x)||isNaN(y))return null;return Math.round((y-x)/864e5)}
+function dateSummary(planned){
+  const st=S.settings,parts=[],trip=nightsBetween(st.start,st.depart),rt=nightsBetween(st.rtStart,st.rtEnd);
+  if(trip!=null)parts.push(trip<0?`<span class="warn">Departure is before arrival</span>`:`${trip} nights in Australia`);
+  if(rt!=null)parts.push(rt<0?`<span class="warn">Road trip end is before its start</span>`:`${rt} nights on the road`);
+  if(trip!=null&&trip>=0&&planned){const d=planned-trip;parts.push(d===0?"route plan fits exactly":d>0?`<span class="warn">route plan is ${d} night${d>1?"s":""} too long</span>`:`${-d} night${d<-1?"s":""} left to plan`)}
+  return parts.join(" · ");
+}
 function renderStats(){
   const c=computed();const done=S.packing.filter(p=>p.done).length;
   const planned=S.budget.reduce((a,b)=>a+(Number(b.amount)||0),0);
@@ -34,7 +42,8 @@ function renderStats(){
      <div class="stat"><b>${S.stops.length}</b><span>stops</span></div>
      <div class="stat"><b>${money(planned)}</b><span>budget</span></div>
      <div class="stat"><b>${done}/${S.packing.length}</b><span>packed</span></div>`;
-  const sd=document.getElementById("startDate");if(document.activeElement!==sd)sd.value=S.settings.start||"";sd.disabled=S.ro;
+  [["startDate","start"],["rtStart","rtStart"],["rtEnd","rtEnd"],["departDate","depart"]].forEach(([id,k])=>{const el=document.getElementById(id);if(!el)return;if(document.activeElement!==el)el.value=S.settings[k]||"";el.disabled=S.ro});
+  const ds=document.getElementById("datesum");if(ds)ds.innerHTML=dateSummary(c.nights);
 }
 
 /* ---------- Sync layer: Supabase table "docs" (collection, id, data) + local cache ---------- */
@@ -358,7 +367,7 @@ document.addEventListener("click",async e=>{
 
 document.addEventListener("change",async e=>{
   const el=e.target,f=el.dataset.f;if(!f)return;
-  if(el.dataset.scope==="settings"){const v=f==="start"?el.value:Number(el.value);await w("trip/settings",{...S.settings,[f]:v},"set");return}
+  if(el.dataset.scope==="settings"){const v=el.type==="date"?el.value:Number(el.value);await w("trip/settings",{...S.settings,[f]:v},"set");return}
   const bid=el.closest("[data-bid]")?.dataset.bid;
   if(bid){await w("budget/"+bid,{[f]:f==="amount"?Number(el.value)||0:el.value});return}
   const pid=el.closest("[data-pid]")?.dataset.pid;
