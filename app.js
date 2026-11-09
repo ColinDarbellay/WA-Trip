@@ -123,15 +123,15 @@ function mountMap(){
   const slot=document.getElementById("mapslot");if(!slot)return;slot.appendChild(mapEl);
   if(!window.L){mapEl.innerHTML=`<div class="empty">The map needs an internet connection the first time it loads.</div>`;return}
   if(!MAP){
-    MAP=L.map(mapEl,{zoomSnap:.5,tap:true});
+    MAP=L.map(mapEl,{zoomSnap:.5,tap:true,minZoom:2});
     const OSM='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',RT=' · routes <a href="https://project-osrm.org">OSRM</a>';
     const ESRI="https://server.arcgisonline.com/ArcGIS/rest/services/";
     const STYLES={
-      "Map":L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:OSM+RT}),
+      "Map":L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,tileSize:512,zoomOffset:-1,minZoom:2,attribution:OSM+RT}),
       "Satellite":L.layerGroup([
         L.tileLayer(ESRI+"World_Imagery/MapServer/tile/{z}/{y}/{x}",{maxZoom:19,attribution:'Imagery &copy; Esri, Maxar, Earthstar Geographics · labels &copy; Esri, HERE, Garmin, OpenStreetMap'+RT}),
-        L.tileLayer(ESRI+"Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}",{maxZoom:19,opacity:.85}),
-        L.tileLayer(ESRI+"Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}",{maxZoom:19})
+        L.tileLayer(ESRI+"Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}",{maxZoom:19,tileSize:512,zoomOffset:-1,minZoom:2,opacity:.85}),
+        L.tileLayer(ESRI+"Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}",{maxZoom:19,tileSize:512,zoomOffset:-1,minZoom:2})
       ])
     };
     let pick="Map";try{const v=localStorage.getItem("wa-map");if(v&&STYLES[v])pick=v}catch(_){}
@@ -177,9 +177,9 @@ function drawMap(){
       const base=n>0&&s.kind!=="optional"&&s.kind!=="day",opt=s.kind==="optional";
       const ax=-left;left+=w+gap;
       const m=L.marker([s.lat,s.lon],{zIndexOffset:sel?1000:0,keyboard:true,title:`${x.num==='O'?'Optional:':x.num+'.'} ${s.name}`,
-        icon:L.divIcon({className:"",iconSize:[w,26],iconAnchor:[ax,13],
-          html:`<div class="num ${base?"base":"day"}${sel?" sel":""}${opt?" opt":""}">${x.num}</div>`})}).addTo(LAYER);
-      m.bindTooltip(`${x.num==='O'?'Optional:':x.num+'.'} ${esc(s.name)}${n?` \u00b7 ${n} night${n>1?"s":""}`:""}`,{direction:"right",offset:[w-ax+2,0],permanent:sel,className:"tip"});
+        icon:L.divIcon({className:"",iconSize:[w,38],iconAnchor:[ax,38],
+          html:`<div class="pin ${base?"base":"day"}${opt?" opt":""}"><div class="num ${base?"base":"day"}${sel?" sel":""}${opt?" opt":""}">${x.num}</div><i></i></div>`})}).addTo(LAYER);
+      m.bindTooltip(`${x.num==='O'?'Optional:':x.num+'.'} ${esc(s.name)}${n?` \u00b7 ${n} night${n>1?"s":""}`:""}`,{direction:"right",offset:[w-ax+2,-25],permanent:sel,className:"tip"});
       m.on("click",()=>pickStop(s.id))});
   });
 }
