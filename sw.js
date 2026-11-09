@@ -1,6 +1,6 @@
 // Offline support: app files and libraries are cached; map tiles you have viewed stay available offline.
-const APP = "wa-app-v48", TILES = "wa-tiles", MAX_TILES = 4000;
-const SHELL = ["./", "./index.html", "./app.js", "./config.js", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png", "./seed.json", "./surf-seed.json"];
+const APP = "wa-app-v49", TILES = "wa-tiles", MAX_TILES = 4000;
+const SHELL = ["./", "./index.html", "./app.js", "./config.js", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png", "./apple-touch-icon.png", "./icon.svg", "./seed.json", "./surf-seed.json"];
 self.addEventListener("install", e => { e.waitUntil(caches.open(APP).then(c => c.addAll(SHELL.map(u => new Request(u, { cache: "reload" })))).then(() => self.skipWaiting())); });
 self.addEventListener("activate", e => {
   e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== APP && k !== TILES).map(k => caches.delete(k)))).then(() => self.clients.claim()));
