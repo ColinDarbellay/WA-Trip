@@ -124,18 +124,21 @@ let MAP=null,LAYER=null,SURF=null;S.surf=[];S.surfMode=false;S.openSurf=null;S.s
 const WAVES=["point","reef","beach"],LEVELS=["beginner","intermediate","advanced"];
 const mapEl=document.createElement("div");mapEl.id="lmap";
 const tok=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+function showCredit(){const el=document.getElementById("mapcredit");if(!el||!MAP)return;
+  const OSM='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',RT=' · routes <a href="https://valhalla.github.io/valhalla/">Valhalla</a> (FOSSGIS) · <a href="https://leafletjs.com">Leaflet</a>';
+  el.innerHTML=(MAP._credit==="Satellite"?'Imagery &copy; Esri, Maxar, Earthstar Geographics · labels &copy; Esri, HERE, Garmin, OpenStreetMap':(window.maplibregl&&L.maplibreGL?'<a href="https://openfreemap.org">OpenFreeMap</a> &copy; <a href="https://www.openmaptiles.org/">OpenMapTiles</a> ':'')+OSM)+RT}
 function mountMap(){mapEl.classList.toggle("surftab",S.tab==="surf");
   const slot=document.getElementById("mapslot");if(!slot)return;slot.appendChild(mapEl);
   if(!window.L){mapEl.innerHTML=`<div class="empty">The map needs an internet connection the first time it loads.</div>`;return}
   if(!MAP){
-    MAP=L.map(mapEl,{zoomSnap:.5,tap:true,minZoom:2});
+    MAP=L.map(mapEl,{zoomSnap:.5,tap:true,minZoom:2,attributionControl:false});
     const OSM='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',RT=' · routes <a href="https://valhalla.github.io/valhalla/">Valhalla</a> (FOSSGIS)';
     const ESRI="https://server.arcgisonline.com/ArcGIS/rest/services/";
     const STYLES={
       "Map":(window.maplibregl&&L.maplibreGL)?L.maplibreGL({style:"https://tiles.openfreemap.org/styles/liberty",attribution:'<a href="https://openfreemap.org">OpenFreeMap</a> &copy; <a href="https://www.openmaptiles.org/">OpenMapTiles</a> '+OSM+RT})
         :L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:OSM+RT}),
       "Satellite":L.layerGroup([
-        L.tileLayer(ESRI+"World_Imagery/MapServer/tile/{z}/{y}/{x}",{maxZoom:19,attribution:'Imagery &copy; Esri, Maxar, Earthstar Geographics · labels &copy; Esri, HERE, Garmin, OpenStreetMap'+RT}),
+        L.tileLayer(ESRI+"World_Imagery/MapServer/tile/{z}/{y}/{x}",{maxZoom:19,maxNativeZoom:19,detectRetina:true,attribution:'Imagery &copy; Esri, Maxar, Earthstar Geographics · labels &copy; Esri, HERE, Garmin, OpenStreetMap'+RT}),
         L.tileLayer(ESRI+"Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}",{maxZoom:19,opacity:.85}),
         L.tileLayer(ESRI+"Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}",{maxZoom:19})
       ])
@@ -144,14 +147,14 @@ function mountMap(){mapEl.classList.toggle("surftab",S.tab==="surf");
     STYLES[pick].addTo(MAP);
     const CTRL=L.control.layers(STYLES,null,{position:"bottomleft",collapsed:false}).addTo(MAP);
     const GLATT='<a href="https://openfreemap.org">OpenFreeMap</a> &copy; <a href="https://www.openmaptiles.org/">OpenMapTiles</a> '+OSM+RT,isGL=!!(window.maplibregl&&L.maplibreGL);
-    if(isGL&&pick==="Map")MAP.attributionControl.addAttribution(GLATT);
-    MAP.on("baselayerchange",e=>{try{localStorage.setItem("wa-map",e.name)}catch(_){}if(isGL){e.name==="Map"?MAP.attributionControl.addAttribution(GLATT):MAP.attributionControl.removeAttribution(GLATT)}});
+    MAP._credit=pick;
+    MAP.on("baselayerchange",e=>{try{localStorage.setItem("wa-map",e.name)}catch(_){}MAP._credit=e.name;showCredit()});
     LAYER=L.layerGroup().addTo(MAP);
     const pts=S.stops.filter(hasXY).map(s=>[s.lat,s.lon]);
     pts.length?MAP.fitBounds(pts,{padding:[24,24]}):MAP.setView([-31.95,115.86],6);
     setupSurf(CTRL);
   }else setTimeout(()=>MAP.invalidateSize(),0);
-  drawMap();
+  drawMap();showCredit();
 }
 function fitAll(){const pts=S.stops.filter(hasXY).map(s=>[s.lat,s.lon]);if(MAP&&pts.length)MAP.fitBounds(pts,{padding:[24,24]})}
 const legOk=(p,s)=>s.route&&s.route.v===2&&s.route.for===p.id&&s.route.from===`${p.lat},${p.lon}`&&s.route.to===`${s.lat},${s.lon}`;
@@ -286,7 +289,7 @@ function renderRoute(){
   });
   const after=S.stops.map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join("");
   app.innerHTML=`<div class="route trip">
-    <div class="mapbox"><div id="mapslot"></div><div class="maplegend"><span><i class="dot" style="background:var(--earth)"></i>Overnight</span><span><i class="dot" style="border:2px solid var(--ocean)"></i>Day stop</span><span>Numbers follow the route · arrows show the direction</span><span class="row" style="gap:6px;margin-left:auto">${!S.surf.length&&Store.user&&Store.member&&!S.ro?`<button class="btn ghost small" data-act="surfseed">Load 16 suggested surf spots</button>`:""}<button class="btn ghost small${S.surfMode?" on":""}" data-act="sfmode">${S.surfMode?"Tap the map to place it…":"+ Surf spot"}</button><button class="btn ghost small" data-act="fitall">Whole trip</button></span></div></div>
+    <div class="mapbox"><div id="mapslot"></div><div class="mapcredit" id="mapcredit"></div><div class="maplegend"><span><i class="dot" style="background:var(--earth)"></i>Overnight</span><span><i class="dot" style="border:2px solid var(--ocean)"></i>Day stop</span><span>Numbers follow the route · arrows show the direction</span><span class="row" style="gap:6px;margin-left:auto">${!S.surf.length&&Store.user&&Store.member&&!S.ro?`<button class="btn ghost small" data-act="surfseed">Load 16 suggested surf spots</button>`:""}<button class="btn ghost small${S.surfMode?" on":""}" data-act="sfmode">${S.surfMode?"Tap the map to place it…":"+ Surf spot"}</button><button class="btn ghost small" data-act="fitall">Whole trip</button></span></div></div>
     <div>
       <div class="section-h"><h2>Stops &amp; drives</h2><span class="note">${c.days} days · road km, ≈ = estimate</span></div>${(()=>{const miss=S.stops.filter(x=>!hasXY(x));return miss.length?`<div class="status" style="margin-bottom:10px">${miss.length} stop${miss.length>1?"s have":" has"} no location yet: ${miss.map(x=>`<button class="linkbtn" data-act="fixloc" data-id="${x.id}">${esc(x.name)}</button>`).join(", ")}. Open it and pick the place from the search.</div>`:""})()}
       ${S.stops.length?`<ul class="log">${items}</ul>`:(Store.user&&Store.member&&!S.ro?`<div class="empty">No stops yet. <button class="btn" data-act="importseed">Load our saved route (25 stops)</button></div>`:`<div class="empty">${Store.user?"No stops yet. Add your arrival city below.":"Sign in at the top to load your trip."}</div>`)}
@@ -601,7 +604,7 @@ function renderSurf(){
   const empty=S.surf.length?`<div class="empty">No spots match these filters.</div>`:
     (Store.user&&Store.member&&!S.ro?`<div class="empty">No surf spots yet. <button class="btn" data-act="surfseed">Load 16 suggested surf spots</button></div>`:`<div class="empty">${Store.user?"No surf spots yet. Add one below.":"Sign in at the top to see your surf spots."}</div>`);
   app.innerHTML=`<div class="route trip">
-    <div class="mapbox"><div id="mapslot"></div><div class="maplegend"><span>Surf: <i class="dot" style="background:#7FD1AE;margin-left:4px"></i>beginner <i class="dot" style="background:var(--warn);margin-left:6px"></i>intermediate <i class="dot" style="background:#E06A6A;margin-left:6px"></i>advanced</span><span>Right-click or press and hold on the map to add a spot</span><span class="row" style="gap:6px;margin-left:auto"><button class="btn ghost small${S.surfMode?" on":""}" data-act="sfmode">${S.surfMode?"Tap the map to place it…":"+ Surf spot"}</button><button class="btn ghost small" data-act="sffit">All spots</button></span></div></div>
+    <div class="mapbox"><div id="mapslot"></div><div class="mapcredit" id="mapcredit"></div><div class="maplegend"><span>Surf: <i class="dot" style="background:#7FD1AE;margin-left:4px"></i>beginner <i class="dot" style="background:var(--warn);margin-left:6px"></i>intermediate <i class="dot" style="background:#E06A6A;margin-left:6px"></i>advanced</span><span>Right-click or press and hold on the map to add a spot</span><span class="row" style="gap:6px;margin-left:auto"><button class="btn ghost small${S.surfMode?" on":""}" data-act="sfmode">${S.surfMode?"Tap the map to place it…":"+ Surf spot"}</button><button class="btn ghost small" data-act="sffit">All spots</button></span></div></div>
     <div>
       <div class="section-h"><h2>Surf spots</h2><span class="note">${S.surf.length} spots · grouped by nearest stop on the route</span></div>
       <div style="display:grid;gap:8px;margin-bottom:6px">${chips(S.sfLevel,"sflevel",[["all","All levels"],...LEVELS.map(x=>[x,cap(x)])])}${chips(S.sfWave,"sfwave",[["all","All waves"],...WAVES.map(x=>[x,cap(x)+" break"])])}</div>
