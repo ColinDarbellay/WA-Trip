@@ -37,7 +37,7 @@ function renderStats(){
   const c=computed();const done=S.packing.filter(p=>p.done).length;
   const planned=S.budget.reduce((a,b)=>a+(Number(b.amount)||0),0);
   document.getElementById("stats").innerHTML=
-    `<div class="stat"><b>${c.nights}</b><span>nights planned</span></div>
+    `
      <div class="stat"><b>≈${c.km.toLocaleString("en-AU")}</b><span>km driving</span></div>
      <div class="stat"><b>${S.stops.length}</b><span>stops</span></div>
      <div class="stat"><b>${money(planned)}</b><span>budget</span></div>
