@@ -113,7 +113,7 @@ function updateAuth(){const _el=document.getElementById("auth");if(_el)_el.class
   if(!SB){el.innerHTML=`<span class="note">Sync isn't set up yet: add your Supabase details to config.js (see README).</span>`;return}
   if(!navigator.onLine){el.innerHTML=`<span class="pill off">Offline</span><span class="note">Showing the last saved version. Editing comes back when you're online.</span>`;return}
   if(!Store.user){el.innerHTML=`<form id="login" class="row" style="gap:6px"><input id="lg-mail" type="email" required placeholder="Email" autocomplete="username" style="width:auto;flex:1;min-width:170px"><input id="lg-pw" type="password" required minlength="6" placeholder="Password" autocomplete="current-password" style="width:auto;flex:1;min-width:130px"><button class="btn" type="submit">Sign in</button><button class="btn ghost" type="button" data-act="signup">Create account</button></form>`;return}
-  el.innerHTML=S.setPw?`<form id="setpw" class="row" style="gap:6px"><input id="sp-pw" type="password" required minlength="6" placeholder="New password (min. 6)" autocomplete="new-password" style="width:auto;flex:1;min-width:170px"><button class="btn" type="submit">Save password</button><button class="btn ghost" type="button" data-act="setpwcancel">Cancel</button></form>`:Store.member?`<details class="acct"><summary><span class="pill on">Synced</span><span class="sr-only">Account</span></summary><div class="acctmenu"><span class="note">Signed in as ${esc(Store.user.email)}</span><div><div class="note" style="margin-bottom:4px">Appearance</div>${themeSeg()}</div><div class="row" style="gap:6px"><button class="btn ghost small" data-act="setpw">Set password</button><button class="btn ghost small" data-act="logout">Sign out</button></div></div></details>`
+  el.innerHTML=S.setPw?`<form id="setpw" class="row" style="gap:6px"><input id="sp-pw" type="password" required minlength="6" placeholder="New password (min. 6)" autocomplete="new-password" style="width:auto;flex:1;min-width:170px"><button class="btn" type="submit">Save password</button><button class="btn ghost" type="button" data-act="setpwcancel">Cancel</button></form>`:Store.member?`<details class="acct"><summary><span class="pill on">Synced</span><span class="sr-only">Account</span></summary><div class="acctmenu"><span class="note">Signed in as ${esc(Store.user.email)}</span><div class="row" style="gap:6px"><button class="btn ghost small" data-act="setpw">Set password</button><button class="btn ghost small" data-act="logout">Sign out</button></div></div></details>`
     :`<span class="pill off">No access</span><span class="note">${esc(Store.user.email)} isn't on the members list yet.</span><button class="btn ghost" data-act="logout">Sign out</button>`;
 }
 
@@ -746,17 +746,8 @@ document.addEventListener("keydown",e=>{if(e.target.id!==GEO.inp||!GEO.items.len
 document.addEventListener("mousedown",e=>{const li=e.target.closest("[data-geo]");if(li){e.preventDefault();geoPick(+li.dataset.geo)}});
 document.addEventListener("click",e=>{const li=e.target.closest("[data-geo]");if(li){geoPick(+li.dataset.geo);return}if(!e.target.closest(".geo"))geoClose()});
 
-/* Appearance: follow the system, or force light/dark */
-function curTheme(){try{return localStorage.getItem("wa-theme")||"auto"}catch(_){return "auto"}}
-function themeSeg(){const c=curTheme();return `<div class="seg" role="group" aria-label="Appearance">${[["auto","Auto"],["light","Day"],["dark","Night"]].map(([v,l])=>`<button type="button" data-act="theme" data-v="${v}" aria-pressed="${c===v}">${l}</button>`).join("")}</div>`}
-function applyTheme(){const c=curTheme(),r=document.documentElement;if(c==="auto")delete r.dataset.theme;else r.dataset.theme=c;
-  const m=document.getElementById("themecolor");if(m)m.content=getComputedStyle(r).getPropertyValue("--bg").trim()||"#15132A";if(typeof drawMap==="function")drawMap()}
-document.addEventListener("click",e=>{const b=e.target.closest('[data-act="theme"]');if(!b)return;e.preventDefault();try{b.dataset.v==="auto"?localStorage.removeItem("wa-theme"):localStorage.setItem("wa-theme",b.dataset.v)}catch(_){}
-  applyTheme();b.closest(".seg").querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",x===b))});
-matchMedia("(prefers-color-scheme: light)").addEventListener("change",()=>{if(curTheme()==="auto")applyTheme()});
 
 (async()=>{
-  applyTheme();
   try{const v=localStorage.getItem("wa-who");if(v&&["All",...WHO].includes(v))S.who=v}catch(_){}
   const h=location.hash.slice(1);if(["route","surf","budget","packing","notes"].includes(h))S.tab=h;
   Store.load();S.db=db;S.got.stops=true;updateAuth();
