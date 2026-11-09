@@ -129,7 +129,7 @@ function glLayer(keep,pane){const l=L.maplibreGL({style:{version:8,sources:{},la
   l.once("add",()=>{try{l.getMaplibreMap().setStyle(OFM_STYLE,{transformStyle:(prev,next)=>({...next,layers:next.layers.filter(keep)})})}catch(_){}});return l}
 function showCredit(){const el=document.getElementById("mapcredit");if(!el||!MAP)return;
   const OSM='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',RT=' · routes <a href="https://valhalla.github.io/valhalla/">Valhalla</a> (FOSSGIS) · <a href="https://leafletjs.com">Leaflet</a>';
-  el.innerHTML=(MAP._credit==="Satellite"?'Imagery &copy; Esri, Maxar, Earthstar Geographics · labels &copy; Esri, HERE, Garmin, OpenStreetMap':(window.maplibregl&&L.maplibreGL?'<a href="https://openfreemap.org">OpenFreeMap</a> &copy; <a href="https://www.openmaptiles.org/">OpenMapTiles</a> ':'')+OSM)+RT}
+  el.innerHTML=(MAP._credit==="Satellite"?'Imagery &copy; Esri, Maxar, Earthstar Geographics · labels '+(window.maplibregl&&L.maplibreGL?'<a href="https://openfreemap.org">OpenFreeMap</a> &copy; OpenStreetMap contributors':'&copy; Esri, HERE, Garmin, OpenStreetMap'):(window.maplibregl&&L.maplibreGL?'<a href="https://openfreemap.org">OpenFreeMap</a> &copy; <a href="https://www.openmaptiles.org/">OpenMapTiles</a> ':'')+OSM)+RT}
 function mountMap(){mapEl.classList.toggle("surftab",S.tab==="surf");
   const slot=document.getElementById("mapslot");if(!slot)return;slot.appendChild(mapEl);
   if(!window.L){mapEl.innerHTML=`<div class="empty">The map needs an internet connection the first time it loads.</div>`;return}
@@ -143,8 +143,8 @@ function mountMap(){mapEl.classList.toggle("surftab",S.tab==="surf");
         :L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:OSM+RT}),
       "Satellite":L.layerGroup([
         L.tileLayer(ESRI+"World_Imagery/MapServer/tile/{z}/{y}/{x}",{maxZoom:19,maxNativeZoom:19,detectRetina:true,attribution:'Imagery &copy; Esri, Maxar, Earthstar Geographics · labels &copy; Esri, HERE, Garmin, OpenStreetMap'+RT}),
-        L.tileLayer(ESRI+"Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}",{maxZoom:19,pane:"labels",opacity:.85}),
-        L.tileLayer(ESRI+"Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}",{maxZoom:19,pane:"labels"})
+        ...(window.maplibregl&&L.maplibreGL?[glLayer(l=>l.type==="symbol","labels")]:[
+        L.tileLayer(ESRI+"Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}",{maxZoom:19,pane:"labels"})])
       ])
     };
     let pick="Map";try{const v=localStorage.getItem("wa-map");if(v&&STYLES[v])pick=v}catch(_){}
@@ -185,6 +185,7 @@ function drawMap(){
   const NUM=routeNums();
   S.stops.forEach((s,i)=>{if(!hasXY(s))return;const k=s.lat.toFixed(3)+","+s.lon.toFixed(3);if(!groups.has(k))groups.set(k,[]);groups.get(k).push({s,num:isOpt(s)?"O":NUM[s.id]})});
   groups.forEach(list=>{
+    const p0=list[0].s;L.circleMarker([p0.lat,p0.lon],{radius:3.5,weight:1.5,color:tok("--surface"),fillColor:tok("--ink"),fillOpacity:1,interactive:false}).addTo(LAYER);
     const k=list.length,gap=4;
     const ws=list.map(x=>Math.max(26,12+String(x.num).length*7.5));
     const total=ws.reduce((p,q)=>p+q,0)+gap*(k-1);let left=-total/2;
@@ -192,9 +193,9 @@ function drawMap(){
       const base=n>0&&s.kind!=="optional"&&s.kind!=="day",opt=s.kind==="optional";
       const ax=-left;left+=w+gap;
       const m=L.marker([s.lat,s.lon],{zIndexOffset:sel?1000:0,keyboard:true,title:`${x.num==='O'?'Optional:':x.num+'.'} ${s.name}`,
-        icon:L.divIcon({className:"",iconSize:[w,26],iconAnchor:[ax,13],
+        icon:L.divIcon({className:"",iconSize:[w,26],iconAnchor:[ax,-6],
           html:`<div class="num ${base?"base":"day"}${sel?" sel":""}${opt?" opt":""}">${x.num}</div>`})}).addTo(LAYER);
-      m.bindTooltip(`${x.num==='O'?'Optional:':x.num+'.'} ${esc(s.name)}${n?` \u00b7 ${n} night${n>1?"s":""}`:""}`,{direction:"right",offset:[w-ax+2,0],permanent:sel,className:"tip"});
+      m.bindTooltip(`${x.num==='O'?'Optional:':x.num+'.'} ${esc(s.name)}${n?` \u00b7 ${n} night${n>1?"s":""}`:""}`,{direction:"right",offset:[w-ax+2,19],permanent:sel,className:"tip"});
       m.on("click",()=>pickStop(s.id))});
   });
 }
