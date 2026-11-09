@@ -234,6 +234,9 @@ function stopEditor(s){
       <label class="f">Kind<select id="k-${s.id}" data-f="kind" ${dis}>${[["base","Overnight base"],["day","Day stop"],["optional","Optional"]].map(([v,l])=>`<option value="${v}" ${s.kind===v?"selected":""}>${l}</option>`).join("")}</select></label>
       <label class="f">Coordinates<input id="c-${s.id}" data-f="coords" value="${hasXY(s)?s.lat+", "+s.lon:""}" placeholder="-33.95, 115.07" ${dis}></label>
     </div>
+    <div class="grid2">
+      <label class="f geo">${hasXY(s)?"Change location by place name":"<span style=\"color:var(--warn)\">No location yet: search the place</span>"}<input id="sg-${s.id}" class="geoinput" data-sid="${s.id}" value="${hasXY(s)?"":esc(s.name)}" placeholder="Search a place, e.g. ${esc(s.name)}" autocomplete="off" role="combobox" aria-autocomplete="list" aria-controls="sg-${s.id}-list" aria-expanded="false" ${dis}><ul id="sg-${s.id}-list" class="geolist" role="listbox" hidden></ul></label>
+    </div>
     <label class="f">Where we sleep (campsite or van spot)<input id="cp-${s.id}" data-f="camp" value="${esc(s.camp)}" placeholder="Not booked yet" ${dis}></label>
     <div><div class="eyebrow" style="margin-bottom:6px">Highlights &amp; spots</div><ul class="hl">${hl||'<li class="note" style="display:block">No highlights yet.</li>'}</ul></div>
     <div class="row"><select id="hk-new" style="width:120px" ${dis} aria-label="New highlight type">${KINDS.map(k=>`<option>${k}</option>`).join("")}</select><input id="hn-new" placeholder="Add a highlight, surf spot, campsite…" style="flex:1;width:auto" ${dis}><button class="btn" data-act="hadd" ${dis}>Add</button></div>
@@ -251,7 +254,7 @@ function renderRoute(){
     if(i>0){const L=c.legs[i],km=L?L.km:null,a=L&&!L.real?"≈ ":"";
       items+= L?`<li class="leg">${a}${km} km · ${a}${fmtMin(L.min)}${L.real?"":" (estimate)"}${km>400?' <span class="long">Long drive day</span>':""}${s.route&&s.route.v===2&&s.route.unpaved!==false?` <span class="long" title="${s.route.unpaved===null?"Route from a car router that may use unsealed roads":"No fully sealed road found for this leg"}">Unsealed road possible</span>`:""}${hasXY(p)&&hasXY(s)?` · <a href="${mapsLink(p,s)}" target="_blank" rel="noopener">Directions</a>`:""}</li>`:`<li class="leg">Add coordinates to see the distance</li>`}
     const n=Number(s.nights)||0,h=s.highlights||[];
-    const chip=s.kind==="optional"?`<span class="chip opt">optional</span>`:(n&&s.kind!=="day")?`<span class="chip ${s.nightsGuess?"guess":""}">${n} night${n>1?"s":""}</span>`:`<span class="chip day">day stop</span>`;
+    const chip=!hasXY(s)?`<span class="chip noloc">no location</span>`:s.kind==="optional"?`<span class="chip opt">optional</span>`:(n&&s.kind!=="day")?`<span class="chip ${s.nightsGuess?"guess":""}">${n} night${n>1?"s":""}</span>`:`<span class="chip day">day stop</span>`;
     const d=dateOf(s._day);
     items+=`<li class="stop ${S.open===s.id?"sel":""}" data-id="${s.id}">
       <button class="stop-head" data-act="toggle" aria-expanded="${S.open===s.id}">
@@ -264,7 +267,7 @@ function renderRoute(){
   app.innerHTML=`<div class="route trip">
     <div class="mapbox"><div id="mapslot"></div><div class="maplegend"><span><i class="dot" style="background:var(--earth)"></i>Overnight</span><span><i class="dot" style="border:2px solid var(--ocean)"></i>Day stop</span><span>Surf: <i class="dot" style="background:#7FD1AE;margin-left:4px"></i>beginner <i class="dot" style="background:var(--warn);margin-left:6px"></i>intermediate <i class="dot" style="background:#E06A6A;margin-left:6px"></i>advanced</span><span>Numbers follow the route · arrows show the direction</span><span class="row" style="gap:6px;margin-left:auto">${!S.surf.length&&Store.user&&Store.member&&!S.ro?`<button class="btn ghost small" data-act="surfseed">Load 16 suggested surf spots</button>`:""}<button class="btn ghost small${S.surfMode?" on":""}" data-act="sfmode">${S.surfMode?"Tap the map to place it…":"+ Surf spot"}</button><button class="btn ghost small" data-act="fitall">Whole trip</button></span></div></div>
     <div>
-      <div class="section-h"><h2>Stops &amp; drives</h2><span class="note">${c.days} days · road km, ≈ = estimate</span></div>
+      <div class="section-h"><h2>Stops &amp; drives</h2><span class="note">${c.days} days · road km, ≈ = estimate</span></div>${(()=>{const miss=S.stops.filter(x=>!hasXY(x));return miss.length?`<div class="status" style="margin-bottom:10px">${miss.length} stop${miss.length>1?"s have":" has"} no location yet: ${miss.map(x=>`<button class="linkbtn" data-act="fixloc" data-id="${x.id}">${esc(x.name)}</button>`).join(", ")}. Open it and pick the place from the search.</div>`:""})()}
       ${S.stops.length?`<ul class="log">${items}</ul>`:(Store.user&&Store.member&&!S.ro?`<div class="empty">No stops yet. <button class="btn" data-act="importseed">Load our saved route (25 stops)</button></div>`:`<div class="empty">${Store.user?"No stops yet. Add your arrival city below.":"Sign in at the top to load your trip."}</div>`)}
       <form class="panel" id="addStop" style="margin-top:18px">
         <h2>Add a stop</h2>
@@ -348,6 +351,7 @@ function parseXY(t){const m=String(t||"").match(/(-?\d{1,2}\.\d+)\s*,\s*(-?\d{1,
 document.addEventListener("click",async e=>{
   const el=e.target.closest("[data-act]");if(!el)return;const a=el.dataset.act;
   if(a==="tab"){S.tab=el.dataset.tab;try{history.replaceState(null,"","#"+S.tab)}catch(_){location.hash=S.tab}render();return}
+  if(a==="fixloc"){const id=el.dataset.id;S.open=id;S.confirm=null;render();setTimeout(()=>{const f=document.getElementById("sg-"+id);if(f){f.scrollIntoView({block:"center"});f.focus()}},60);return}
   if(a==="stopsave"){commitEdits();S.open=null;S.confirm=null;render();toast("Saved");return}
   if(a==="toggle")commitEdits();
   if(a==="toggle"||a==="pick"){const id=el.closest("[data-id]").dataset.id;S.open=S.open===id&&a==="toggle"?null:id;S.confirm=null;if(a==="pick"&&S.tab!=="route"){S.tab="route"}render();if(a==="toggle"&&S.open&&MAP){const st=cur();if(st&&hasXY(st))MAP.panTo([st.lat,st.lon])}
@@ -690,14 +694,18 @@ document.addEventListener("submit",async e=>{
 document.addEventListener("keydown",e=>{if(e.key==="Enter"&&e.target.classList&&e.target.classList.contains("ptext")){e.preventDefault();e.target.blur()}});
 
 /* Place search for new stops: Photon (komoot, OpenStreetMap data), limited to Western Australia */
-const GEO={t:null,ctl:null,items:[],sel:-1};
-function geoClose(){const l=document.getElementById("geo-list"),i=document.getElementById("as-name");if(l){l.hidden=true;l.innerHTML=""}if(i)i.setAttribute("aria-expanded","false");GEO.items=[];GEO.sel=-1}
+const GEO={t:null,ctl:null,items:[],sel:-1,inp:"as-name"};
+function geoListId(){return GEO.inp==="as-name"?"geo-list":GEO.inp+"-list"}
+function geoClose(){const l=document.getElementById(geoListId()),i=document.getElementById(GEO.inp);if(l){l.hidden=true;l.innerHTML=""}if(i)i.setAttribute("aria-expanded","false");GEO.items=[];GEO.sel=-1}
 function geoLabel(p){const parts=[p.name,p.city&&p.city!==p.name?p.city:null,p.county,p.state].filter(Boolean);return [...new Set(parts)].join(", ")}
 const GEO_KIND={beach:"Beach",town:"Town",city:"City",village:"Village",hamlet:"Hamlet",suburb:"Suburb",national_park:"National park",protected_area:"Park",camp_site:"Campsite",caravan_site:"Caravan park",peak:"Peak",bay:"Bay",cape:"Cape",island:"Island",viewpoint:"Viewpoint",attraction:"Attraction",locality:"Place"};
-function geoPick(k){const f=GEO.items[k];if(!f)return;const [lon,lat]=f.geometry.coordinates,n=document.getElementById("as-name"),c=document.getElementById("as-c");
+function geoPick(k){const f=GEO.items[k];if(!f)return;const [lon,lat]=f.geometry.coordinates;
+  if(GEO.inp!=="as-name"){const inp=document.getElementById(GEO.inp),sid=inp?.dataset.sid;geoClose();inp?.blur();if(!sid)return;
+    w("stops/"+sid,{lat:+lat.toFixed(5),lon:+lon.toFixed(5),roadFor:""}).then(()=>{toast("Location set: "+(f.properties.name||""));if(MAP)MAP.setView([lat,lon],Math.max(MAP.getZoom(),9))});return}
+  const n=document.getElementById("as-name"),c=document.getElementById("as-c");
   if(n)n.value=f.properties.name||n.value;if(c)c.value=`${lat.toFixed(5)}, ${lon.toFixed(5)}`;const err=document.getElementById("as-err");if(err)err.textContent="";geoClose();
   if(MAP){MAP.setView([lat,lon],Math.max(MAP.getZoom(),10))}}
-function geoRender(){const l=document.getElementById("geo-list"),i=document.getElementById("as-name");if(!l)return;
+function geoRender(){const l=document.getElementById(geoListId()),i=document.getElementById(GEO.inp);if(!l)return;
   if(!GEO.items.length){l.hidden=false;l.innerHTML=`<li class="geoempty">No places found in Western Australia</li>`;return}
   l.innerHTML=GEO.items.map((f,k)=>{const p=f.properties,kind=GEO_KIND[p.osm_value]||"";return `<li role="option" id="geo-${k}" data-geo="${k}" aria-selected="${k===GEO.sel}" class="${k===GEO.sel?"on":""}"><b>${esc(p.name||"")}</b><span>${esc([kind,geoLabel(p).split(", ").slice(1).join(", ")].filter(Boolean).join(" · "))}</span></li>`}).join("");
   l.hidden=false;if(i)i.setAttribute("aria-expanded","true")}
@@ -705,12 +713,15 @@ async function geoSearch(q){
   if(GEO.ctl)GEO.ctl.abort();GEO.ctl=new AbortController();
   try{const r=await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=7&lang=en&bbox=112,-36,129.1,-13.5`,{signal:GEO.ctl.signal});if(!r.ok)throw 0;
     const j=await r.json();GEO.items=(j.features||[]).filter(f=>f.properties&&f.properties.name);GEO.sel=-1;geoRender()}
-  catch(e){if(e&&e.name==="AbortError")return;const l=document.getElementById("geo-list");if(l){l.hidden=false;l.innerHTML=`<li class="geoempty">${navigator.onLine?"Place search isn't reachable right now. Enter coordinates instead.":"You're offline."}</li>`}}
+  catch(e){if(e&&e.name==="AbortError")return;const l=document.getElementById(geoListId());if(l){l.hidden=false;l.innerHTML=`<li class="geoempty">${navigator.onLine?"Place search isn't reachable right now. Enter coordinates instead.":"You're offline."}</li>`}}
 }
-document.addEventListener("input",e=>{if(e.target.id!=="as-name")return;const q=e.target.value.trim();const c=document.getElementById("as-c");if(c&&c.dataset.auto!=="0")c.value="";
+document.addEventListener("input",e=>{if(!e.target.classList||!e.target.classList.contains("geoinput"))return;if(GEO.inp!==e.target.id)geoClose();GEO.inp=e.target.id;
+  const q=e.target.value.trim();clearTimeout(GEO.t);if(q.length<3){geoClose();return}GEO.t=setTimeout(()=>geoSearch(q),300)});
+document.addEventListener("focusin",e=>{const t=e.target;if(!t.classList||!t.classList.contains("geoinput")||t.value.trim().length<3)return;if(GEO.inp!==t.id)geoClose();GEO.inp=t.id;geoSearch(t.value.trim())});
+document.addEventListener("input",e=>{if(e.target.id!=="as-name")return;if(GEO.inp!=="as-name")geoClose();GEO.inp="as-name";const q=e.target.value.trim();const c=document.getElementById("as-c");if(c&&c.dataset.auto!=="0")c.value="";
   clearTimeout(GEO.t);if(q.length<3){geoClose();return}GEO.t=setTimeout(()=>geoSearch(q),300)});
 document.addEventListener("input",e=>{if(e.target.id==="as-c")e.target.dataset.auto=e.target.value?"0":""});
-document.addEventListener("keydown",e=>{if(e.target.id!=="as-name"||!GEO.items.length)return;
+document.addEventListener("keydown",e=>{if(e.target.id!==GEO.inp||!GEO.items.length)return;
   if(e.key==="ArrowDown"){e.preventDefault();GEO.sel=(GEO.sel+1)%GEO.items.length;geoRender()}
   else if(e.key==="ArrowUp"){e.preventDefault();GEO.sel=(GEO.sel-1+GEO.items.length)%GEO.items.length;geoRender()}
   else if(e.key==="Enter"){e.preventDefault();geoPick(GEO.sel<0?0:GEO.sel)}
