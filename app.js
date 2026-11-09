@@ -124,6 +124,9 @@ let MAP=null,LAYER=null,SURF=null;S.surf=[];S.surfMode=false;S.openSurf=null;S.s
 const WAVES=["point","reef","beach"],LEVELS=["beginner","intermediate","advanced"];
 const mapEl=document.createElement("div");mapEl.id="lmap";
 const tok=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const OFM_STYLE="https://tiles.openfreemap.org/styles/liberty";
+function glLayer(keep,pane){const l=L.maplibreGL({style:{version:8,sources:{},layers:[]},pane,interactive:false});
+  l.once("add",()=>{try{l.getMaplibreMap().setStyle(OFM_STYLE,{transformStyle:(prev,next)=>({...next,layers:next.layers.filter(keep)})})}catch(_){}});return l}
 function showCredit(){const el=document.getElementById("mapcredit");if(!el||!MAP)return;
   const OSM='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',RT=' · routes <a href="https://valhalla.github.io/valhalla/">Valhalla</a> (FOSSGIS) · <a href="https://leafletjs.com">Leaflet</a>';
   el.innerHTML=(MAP._credit==="Satellite"?'Imagery &copy; Esri, Maxar, Earthstar Geographics · labels &copy; Esri, HERE, Garmin, OpenStreetMap':(window.maplibregl&&L.maplibreGL?'<a href="https://openfreemap.org">OpenFreeMap</a> &copy; <a href="https://www.openmaptiles.org/">OpenMapTiles</a> ':'')+OSM)+RT}
@@ -132,15 +135,16 @@ function mountMap(){mapEl.classList.toggle("surftab",S.tab==="surf");
   if(!window.L){mapEl.innerHTML=`<div class="empty">The map needs an internet connection the first time it loads.</div>`;return}
   if(!MAP){
     MAP=L.map(mapEl,{zoomSnap:.5,tap:true,minZoom:2,attributionControl:false});
+    const lp=MAP.createPane("labels");lp.style.zIndex=450;lp.style.pointerEvents="none";
     const OSM='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',RT=' · routes <a href="https://valhalla.github.io/valhalla/">Valhalla</a> (FOSSGIS)';
     const ESRI="https://server.arcgisonline.com/ArcGIS/rest/services/";
     const STYLES={
-      "Map":(window.maplibregl&&L.maplibreGL)?L.maplibreGL({style:"https://tiles.openfreemap.org/styles/liberty",attribution:'<a href="https://openfreemap.org">OpenFreeMap</a> &copy; <a href="https://www.openmaptiles.org/">OpenMapTiles</a> '+OSM+RT})
+      "Map":(window.maplibregl&&L.maplibreGL)?L.layerGroup([glLayer(l=>l.type!=="symbol","tilePane"),glLayer(l=>l.type==="symbol","labels")])
         :L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:OSM+RT}),
       "Satellite":L.layerGroup([
         L.tileLayer(ESRI+"World_Imagery/MapServer/tile/{z}/{y}/{x}",{maxZoom:19,maxNativeZoom:19,detectRetina:true,attribution:'Imagery &copy; Esri, Maxar, Earthstar Geographics · labels &copy; Esri, HERE, Garmin, OpenStreetMap'+RT}),
-        L.tileLayer(ESRI+"Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}",{maxZoom:19,opacity:.85}),
-        L.tileLayer(ESRI+"Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}",{maxZoom:19})
+        L.tileLayer(ESRI+"Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}",{maxZoom:19,pane:"labels",opacity:.85}),
+        L.tileLayer(ESRI+"Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}",{maxZoom:19,pane:"labels"})
       ])
     };
     let pick="Map";try{const v=localStorage.getItem("wa-map");if(v&&STYLES[v])pick=v}catch(_){}
