@@ -177,9 +177,9 @@ function drawMap(){
       const base=n>0&&s.kind!=="optional"&&s.kind!=="day",opt=s.kind==="optional";
       const ax=-left;left+=w+gap;
       const m=L.marker([s.lat,s.lon],{zIndexOffset:sel?1000:0,keyboard:true,title:`${x.num==='O'?'Optional:':x.num+'.'} ${s.name}`,
-        icon:L.divIcon({className:"",iconSize:[w,38],iconAnchor:[ax,38],
-          html:`<div class="pin ${base?"base":"day"}${opt?" opt":""}"><div class="num ${base?"base":"day"}${sel?" sel":""}${opt?" opt":""}">${x.num}</div><i></i></div>`})}).addTo(LAYER);
-      m.bindTooltip(`${x.num==='O'?'Optional:':x.num+'.'} ${esc(s.name)}${n?` \u00b7 ${n} night${n>1?"s":""}`:""}`,{direction:"right",offset:[w-ax+2,-25],permanent:sel,className:"tip"});
+        icon:L.divIcon({className:"",iconSize:[w,26],iconAnchor:[ax,13],
+          html:`<div class="num ${base?"base":"day"}${sel?" sel":""}${opt?" opt":""}">${x.num}</div>`})}).addTo(LAYER);
+      m.bindTooltip(`${x.num==='O'?'Optional:':x.num+'.'} ${esc(s.name)}${n?` \u00b7 ${n} night${n>1?"s":""}`:""}`,{direction:"right",offset:[w-ax+2,0],permanent:sel,className:"tip"});
       m.on("click",()=>pickStop(s.id))});
   });
 }
