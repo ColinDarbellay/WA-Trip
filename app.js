@@ -8,7 +8,8 @@ const app=document.getElementById("app");
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const hasXY=s=>typeof s.lat==="number"&&typeof s.lon==="number";
 function hav(a,b){const r=Math.PI/180,dLa=(b.lat-a.lat)*r,dLo=(b.lon-a.lon)*r;const x=Math.sin(dLa/2)**2+Math.cos(a.lat*r)*Math.cos(b.lat*r)*Math.sin(dLo/2)**2;return 2*6371*Math.asin(Math.sqrt(x))}
-const money=n=>"A$ "+Math.round(n).toLocaleString("en-AU");
+const money=n=>Math.round(n).toLocaleString("de-DE")+" €";
+const FX=()=>Number(S.settings.eurPerAud)||0.63;
 function toast(t){const el=document.getElementById("toast");el.textContent=t;el.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>el.hidden=true,2600)}
 function status(t){const el=document.getElementById("status");el.textContent=t||"";el.hidden=!t}
 
@@ -283,7 +284,7 @@ function renderBudget(){
   const c=computed(),dis=S.ro?"disabled":"";
   const tot={};CATS.forEach(k=>tot[k]=0);S.budget.forEach(b=>tot[b.cat in tot?b.cat:"Other"]+=Number(b.amount)||0);
   const all=Object.values(tot).reduce((a,b)=>a+b,0),max=Math.max(1,...Object.values(tot));
-  const L=Number(S.settings.fuelL)||12,P=Number(S.settings.fuelPrice)||2.1,fuel=c.km*L/100*P;
+  const L=Number(S.settings.fuelL)||12,P=Number(S.settings.fuelPrice)||2.1,fuel=c.km*L/100*P*FX();
   const rows=[...S.budget].sort((a,b)=>CATS.indexOf(a.cat)-CATS.indexOf(b.cat)).map(b=>`<tr data-bid="${b.id}">
     <td><select data-f="cat" ${dis} aria-label="Category">${CATS.map(k=>`<option ${k===b.cat?"selected":""}>${k}</option>`).join("")}</select></td>
     <td><input data-f="label" value="${esc(b.label)}" ${dis} aria-label="Item"></td>
@@ -295,16 +296,16 @@ function renderBudget(){
       <tr><th>Total planned</th><td></td><td class="num"><b>${money(all)}</b></td></tr></tbody></table>
       <div class="panel" style="background:var(--bg)">
         <div class="eyebrow">Fuel estimate from route</div>
-        <div>≈ ${c.km.toLocaleString("en-AU")} km × <input id="fuelL" data-scope="settings" data-f="fuelL" type="number" step=".5" value="${L}" style="width:70px" ${dis} aria-label="Litres per 100 km"> L/100 km × A$ <input id="fuelP" data-scope="settings" data-f="fuelPrice" type="number" step=".05" value="${P}" style="width:80px" ${dis} aria-label="Price per litre"> /L = <b>${money(fuel)}</b></div>
+        <div>≈ ${c.km.toLocaleString("en-AU")} km × <input id="fuelL" data-scope="settings" data-f="fuelL" type="number" step=".5" value="${L}" style="width:70px" ${dis} aria-label="Litres per 100 km"> L/100 km × A$ <input id="fuelP" data-scope="settings" data-f="fuelPrice" type="number" step=".05" value="${P}" style="width:80px" ${dis} aria-label="Price per litre"> /L = <b>${money(fuel)}</b><div class="note" style="margin-top:6px">Fuel prices in Australian dollars, converted at 1 A$ = <input id="fx" data-scope="settings" data-f="eurPerAud" type="number" step=".01" min="0.3" max="1.2" value="${FX()}" style="width:72px" ${dis} aria-label="Euro per Australian dollar"> €</div></div>
         <div class="row"><button class="btn ghost" data-act="fueladd" ${dis}>Add as planned fuel</button><span class="note">Remote roadhouses cost more than Perth.</span></div>
       </div>
     </div>
     <div class="panel"><h2>Planned costs</h2>
-      ${S.budget.length?`<div class="scroll"><table class="tbl"><thead><tr><th>Category</th><th>Item</th><th class="num">A$</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`:`<div class="empty">No costs yet. Start with the big ones: camper rental and flights.</div>`}
+      ${S.budget.length?`<div class="scroll"><table class="tbl"><thead><tr><th>Category</th><th>Item</th><th class="num">€</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`:`<div class="empty">No costs yet. Start with the big ones: camper rental and flights.</div>`}
       <form id="addCost" class="grid2">
         <label class="f">Category<select id="ac-cat">${CATS.map(k=>`<option>${k}</option>`).join("")}</select></label>
         <label class="f">Item<input id="ac-label" required placeholder="e.g. Rottnest ferry"></label>
-        <label class="f">Amount (A$)<input id="ac-amt" type="number" min="0" step="10" required></label>
+        <label class="f">Amount (€)<input id="ac-amt" type="number" min="0" step="10" required></label>
         <div style="align-self:end"><button class="btn" type="submit" ${dis}>Add cost</button></div>
       </form></div></div>`;
 }
@@ -364,7 +365,7 @@ document.addEventListener("click",async e=>{
   if(a==="bdel"){await w("budget/"+el.closest("[data-bid]").dataset.bid,null,"delete");return}
   if(a==="pdel"){await w("packing/"+el.closest("[data-pid]").dataset.pid,null,"delete");return}
   if(a==="fueladd"){const c=computed(),L=Number(S.settings.fuelL)||12,P=Number(S.settings.fuelPrice)||2.1;
-    await w("budget/"+S.db.collection("budget").doc().id,{cat:"Fuel",label:`Fuel, ≈${c.km} km at ${L} L/100 km`,amount:Math.round(c.km*L/100*P)},"set");toast("Fuel estimate added");return}
+    await w("budget/"+S.db.collection("budget").doc().id,{cat:"Fuel",label:`Fuel, ≈${c.km} km at ${L} L/100 km`,amount:Math.round(c.km*L/100*P*FX())},"set");toast("Fuel estimate added");return}
 });
 
 document.addEventListener("change",async e=>{
