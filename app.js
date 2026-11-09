@@ -168,7 +168,7 @@ function drawMap(){
     legArrows(pts,earth)});
   const groups=new Map();
   const NUM=routeNums();
-  S.stops.forEach((s,i)=>{if(!hasXY(s))return;const k=s.lat.toFixed(3)+","+s.lon.toFixed(3);if(!groups.has(k))groups.set(k,[]);groups.get(k).push({s,num:isOpt(s)?"opt":NUM[s.id]})});
+  S.stops.forEach((s,i)=>{if(!hasXY(s))return;const k=s.lat.toFixed(3)+","+s.lon.toFixed(3);if(!groups.has(k))groups.set(k,[]);groups.get(k).push({s,num:isOpt(s)?"O":NUM[s.id]})});
   groups.forEach(list=>{
     const k=list.length,gap=4;
     const ws=list.map(x=>Math.max(26,12+String(x.num).length*7.5));
@@ -176,10 +176,10 @@ function drawMap(){
     list.forEach((x,j)=>{const s=x.s,w=ws[j],sel=s.id===S.open,n=Number(s.nights)||0;
       const base=n>0&&s.kind!=="optional"&&s.kind!=="day",opt=s.kind==="optional";
       const ax=-left;left+=w+gap;
-      const m=L.marker([s.lat,s.lon],{zIndexOffset:sel?1000:0,keyboard:true,title:`${x.num==='opt'?'Optional:':x.num+'.'} ${s.name}`,
+      const m=L.marker([s.lat,s.lon],{zIndexOffset:sel?1000:0,keyboard:true,title:`${x.num==='O'?'Optional:':x.num+'.'} ${s.name}`,
         icon:L.divIcon({className:"",iconSize:[w,26],iconAnchor:[ax,13],
           html:`<div class="num ${base?"base":"day"}${sel?" sel":""}${opt?" opt":""}">${x.num}</div>`})}).addTo(LAYER);
-      m.bindTooltip(`${x.num==='opt'?'Optional:':x.num+'.'} ${esc(s.name)}${n?` \u00b7 ${n} night${n>1?"s":""}`:""}`,{direction:"right",offset:[w-ax+2,0],permanent:sel,className:"tip"});
+      m.bindTooltip(`${x.num==='O'?'Optional:':x.num+'.'} ${esc(s.name)}${n?` \u00b7 ${n} night${n>1?"s":""}`:""}`,{direction:"right",offset:[w-ax+2,0],permanent:sel,className:"tip"});
       m.on("click",()=>pickStop(s.id))});
   });
 }
