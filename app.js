@@ -126,7 +126,7 @@ const mapEl=document.createElement("div");mapEl.id="lmap";
 const tok=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 const OFM_STYLE="https://tiles.openfreemap.org/styles/liberty";
 function glLayer(keep,pane){const l=L.maplibreGL({style:{version:8,sources:{},layers:[]},pane,interactive:false});
-  l.once("add",()=>{try{l.getMaplibreMap().setStyle(OFM_STYLE,{transformStyle:(prev,next)=>({...next,layers:next.layers.filter(keep)})})}catch(_){}});return l}
+  l.on("add",()=>{try{l.getMaplibreMap().setStyle(OFM_STYLE,{transformStyle:(prev,next)=>({...next,layers:next.layers.filter(keep)})})}catch(_){}});return l}
 function showCredit(){const el=document.getElementById("mapcredit");if(!el||!MAP)return;
   const OSM='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',RT=' · routes <a href="https://valhalla.github.io/valhalla/">Valhalla</a> (FOSSGIS) · <a href="https://leafletjs.com">Leaflet</a>';
   el.innerHTML=(MAP._credit==="Satellite"?'Imagery &copy; Esri, Maxar, Earthstar Geographics · labels '+(window.maplibregl&&L.maplibreGL?'<a href="https://openfreemap.org">OpenFreeMap</a> &copy; OpenStreetMap contributors':'&copy; Esri, HERE, Garmin, OpenStreetMap'):(window.maplibregl&&L.maplibreGL?'<a href="https://openfreemap.org">OpenFreeMap</a> &copy; <a href="https://www.openmaptiles.org/">OpenMapTiles</a> ':'')+OSM)+RT}
