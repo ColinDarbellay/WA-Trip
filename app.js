@@ -234,7 +234,8 @@ async function fetchRoutes(){
 
 function stopEditor(s){
   const dis=S.ro?"disabled":"";
-  const hl=(s.highlights||[]).map((h,i)=>`<li><select data-f="hk" data-i="${i}" ${dis} aria-label="Type">${KINDS.map(k=>`<option ${k===h.k?"selected":""}>${k}</option>`).join("")}</select><input data-f="hn" data-i="${i}" value="${esc(h.n)}" ${dis} aria-label="Highlight name"><span class="hmove"><button class="x" data-act="hup" data-i="${i}" ${dis||i===0?"disabled":""} aria-label="Move ${esc(h.n)} up">↑</button><button class="x" data-act="hdown" data-i="${i}" ${dis||i===(s.highlights||[]).length-1?"disabled":""} aria-label="Move ${esc(h.n)} down">↓</button></span><button class="x" data-act="hdel" data-i="${i}" ${dis} aria-label="Remove ${esc(h.n)}">✕</button></li>`).join("");
+  const hsel=S.hlSel&&S.hlSel.sid===s.id?S.hlSel.i:-1,hn=(s.highlights||[]).length;
+  const hl=(s.highlights||[]).map((h,i)=>`<li class="${i===hsel?"on":""}" data-hi="${i}"><input data-f="hn" data-i="${i}" value="${esc(h.n)}" ${dis} aria-label="Highlight ${i+1}"><span class="hctl"><button class="x" data-act="hup" data-i="${i}" ${dis||i===0?"disabled":""} aria-label="Move up">↑</button><button class="x" data-act="hdown" data-i="${i}" ${dis||i===hn-1?"disabled":""} aria-label="Move down">↓</button><button class="x" data-act="hdel" data-i="${i}" ${dis} aria-label="Remove ${esc(h.n)}">✕</button></span></li>`).join("");
   const conf=S.confirm===s.id?`<div class="confirm actbar">Really delete ${esc(s.name)} and its highlights? <button class="btn danger" data-act="delyes">Delete</button><button class="btn ghost" data-act="delno">Keep</button></div>`:"";
   return `<div class="ed">
     <div class="grid2">
@@ -251,7 +252,7 @@ function stopEditor(s){
       <label class="f">Booking<select id="cs-${s.id}" data-f="campStatus" ${dis}>${BOOK.map(([v,l])=>`<option value="${v}" ${(s.campStatus||"")===v?"selected":""}>${l}</option>`).join("")}</select></label>
     </div>
     <div><div class="eyebrow" style="margin-bottom:6px">Highlights &amp; spots</div><ul class="hl">${hl||'<li class="note" style="display:block">No highlights yet.</li>'}</ul></div>
-    <div class="row"><select id="hk-new" style="width:120px" ${dis} aria-label="New highlight type">${KINDS.map(k=>`<option>${k}</option>`).join("")}</select><input id="hn-new" placeholder="Add a highlight, surf spot, campsite…" style="flex:1;width:auto" ${dis}><button class="btn" data-act="hadd" ${dis}>Add</button></div>
+    <div class="row"><input id="hn-new" placeholder="Add a highlight" style="flex:1;width:auto" ${dis}><button class="btn" data-act="hadd" ${dis}>Add</button></div>
     <label class="f">Notes<textarea id="no-${s.id}" data-f="notes" ${dis}>${esc(s.notes)}</textarea></label>
     <div class="row"><button class="btn ghost" data-act="up" ${dis}>Move up</button><button class="btn ghost" data-act="down" ${dis}>Move down</button></div>
     ${conf||`<div class="actbar"><button class="btn ghost" data-act="del" style="color:var(--earth)" ${dis}>Delete stop</button><button class="btn" data-act="stopsave">Save</button></div>`}</div>`;
@@ -379,9 +380,9 @@ document.addEventListener("click",async e=>{
     if(a==="pick"){const li=app.querySelector(`.stop[data-id="${id}"]`);li&&li.scrollIntoView({block:"nearest",behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth"})}return}
   const s=cur();
   if(a==="hadd"&&s){const n=document.getElementById("hn-new").value.trim();if(!n){document.getElementById("hn-new").focus();return}
-    await w("stops/"+s.id,{highlights:[...(s.highlights||[]),{n,k:document.getElementById("hk-new").value}]});return}
-  if((a==="hup"||a==="hdown")&&s){commitEdits();const h=(s.highlights||[]).map(x=>({...x})),i=+el.dataset.i,j=a==="hup"?i-1:i+1;if(j<0||j>=h.length)return;[h[i],h[j]]=[h[j],h[i]];await w("stops/"+s.id,{highlights:h});return}
-  if(a==="hdel"&&s){const h=[...(s.highlights||[])];h.splice(+el.dataset.i,1);await w("stops/"+s.id,{highlights:h});return}
+    await w("stops/"+s.id,{highlights:[...(s.highlights||[]),{n,k:"highlight"}]});return}
+  if((a==="hup"||a==="hdown")&&s){commitEdits();const h=(s.highlights||[]).map(x=>({...x})),i=+el.dataset.i,j=a==="hup"?i-1:i+1;if(j<0||j>=h.length)return;[h[i],h[j]]=[h[j],h[i]];S.hlSel={sid:s.id,i:j};await w("stops/"+s.id,{highlights:h});return}
+  if(a==="hdel"&&s){S.hlSel=null;const h=[...(s.highlights||[])];h.splice(+el.dataset.i,1);await w("stops/"+s.id,{highlights:h});return}
   if((a==="up"||a==="down")&&s){const i=S.stops.indexOf(s),j=a==="up"?i-1:i+1,o=S.stops[j];if(!o)return;
     const so=s.order,oo=o.order;await w("stops/"+s.id,{order:oo});await w("stops/"+o.id,{order:so});return}
   if(a==="del"&&s){S.confirm=s.id;render();return}
@@ -752,6 +753,10 @@ document.addEventListener("keydown",e=>{if(e.target.id!==GEO.inp||!GEO.items.len
 document.addEventListener("mousedown",e=>{const li=e.target.closest("[data-geo]");if(li){e.preventDefault();geoPick(+li.dataset.geo)}});
 document.addEventListener("click",e=>{const li=e.target.closest("[data-geo]");if(li){geoPick(+li.dataset.geo);return}if(!e.target.closest(".geo"))geoClose()});
 
+
+/* Highlights: tap a row to show its move/delete buttons */
+document.addEventListener("focusin",e=>{const li=e.target.closest(".hl li[data-hi]");if(!li)return;const sid=S.open;if(!sid)return;
+  S.hlSel={sid,i:+li.dataset.hi};li.parentElement.querySelectorAll("li.on").forEach(x=>x!==li&&x.classList.remove("on"));li.classList.add("on")});
 
 (async()=>{
   try{const v=localStorage.getItem("wa-who");if(v&&["All",...WHO].includes(v))S.who=v}catch(_){}
