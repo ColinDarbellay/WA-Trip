@@ -1,4 +1,6 @@
 const CATS=["Camper rental","Flights","Fuel","Campsites","Food","Activities","Other"];
+const BOOK=[["","Not booked"],["tobook","To book"],["requested","Requested"],["booked","Booked"],["paid","Booked & paid"],["none","No booking needed"]];
+const BOOK_CHIP={tobook:["To book","bk-todo"],requested:["Requested","bk-wait"],booked:["Booked","bk-ok"],paid:["Paid","bk-ok"],none:["Free camp","bk-free"]};
 const KINDS=["highlight","surf","beach","hike","wildlife","campsite","van spot"];
 const GROUPS=["Documents","Camper","Surf","Kids","Clothes","Other"];
 const WHO=["Isabel","Colin","Amalia","Family"];
@@ -232,7 +234,7 @@ async function fetchRoutes(){
 
 function stopEditor(s){
   const dis=S.ro?"disabled":"";
-  const hl=(s.highlights||[]).map((h,i)=>`<li><select data-f="hk" data-i="${i}" ${dis} aria-label="Type">${KINDS.map(k=>`<option ${k===h.k?"selected":""}>${k}</option>`).join("")}</select><input data-f="hn" data-i="${i}" value="${esc(h.n)}" ${dis} aria-label="Highlight name"><button class="x" data-act="hdel" data-i="${i}" ${dis} aria-label="Remove ${esc(h.n)}">✕</button></li>`).join("");
+  const hl=(s.highlights||[]).map((h,i)=>`<li><select data-f="hk" data-i="${i}" ${dis} aria-label="Type">${KINDS.map(k=>`<option ${k===h.k?"selected":""}>${k}</option>`).join("")}</select><input data-f="hn" data-i="${i}" value="${esc(h.n)}" ${dis} aria-label="Highlight name"><span class="hmove"><button class="x" data-act="hup" data-i="${i}" ${dis||i===0?"disabled":""} aria-label="Move ${esc(h.n)} up">↑</button><button class="x" data-act="hdown" data-i="${i}" ${dis||i===(s.highlights||[]).length-1?"disabled":""} aria-label="Move ${esc(h.n)} down">↓</button></span><button class="x" data-act="hdel" data-i="${i}" ${dis} aria-label="Remove ${esc(h.n)}">✕</button></li>`).join("");
   const conf=S.confirm===s.id?`<div class="confirm actbar">Really delete ${esc(s.name)} and its highlights? <button class="btn danger" data-act="delyes">Delete</button><button class="btn ghost" data-act="delno">Keep</button></div>`:"";
   return `<div class="ed">
     <div class="grid2">
@@ -244,7 +246,10 @@ function stopEditor(s){
     <div class="grid2">
       <label class="f geo">${hasXY(s)?"Change location by place name":"<span style=\"color:var(--warn)\">No location yet: search the place</span>"}<input id="sg-${s.id}" class="geoinput" data-sid="${s.id}" value="${hasXY(s)?"":esc(s.name)}" placeholder="Search a place, e.g. ${esc(s.name)}" autocomplete="off" role="combobox" aria-autocomplete="list" aria-controls="sg-${s.id}-list" aria-expanded="false" ${dis}><ul id="sg-${s.id}-list" class="geolist" role="listbox" hidden></ul></label>
     </div>
-    <label class="f">Where we sleep (campsite or van spot)<input id="cp-${s.id}" data-f="camp" value="${esc(s.camp)}" placeholder="Not booked yet" ${dis}></label>
+    <div class="grid2 campgrid">
+      <label class="f">Where we sleep (campsite or van spot)<input id="cp-${s.id}" data-f="camp" value="${esc(s.camp)}" placeholder="e.g. Yallingup Beach Holiday Park" ${dis}></label>
+      <label class="f">Booking<select id="cs-${s.id}" data-f="campStatus" ${dis}>${BOOK.map(([v,l])=>`<option value="${v}" ${(s.campStatus||"")===v?"selected":""}>${l}</option>`).join("")}</select></label>
+    </div>
     <div><div class="eyebrow" style="margin-bottom:6px">Highlights &amp; spots</div><ul class="hl">${hl||'<li class="note" style="display:block">No highlights yet.</li>'}</ul></div>
     <div class="row"><select id="hk-new" style="width:120px" ${dis} aria-label="New highlight type">${KINDS.map(k=>`<option>${k}</option>`).join("")}</select><input id="hn-new" placeholder="Add a highlight, surf spot, campsite…" style="flex:1;width:auto" ${dis}><button class="btn" data-act="hadd" ${dis}>Add</button></div>
     <label class="f">Notes<textarea id="no-${s.id}" data-f="notes" ${dis}>${esc(s.notes)}</textarea></label>
@@ -272,7 +277,7 @@ function renderRoute(){
       <button class="stop-head rhead" data-act="toggle" aria-expanded="${S.open===s.id}">
         <span class="daybox"><b>Day ${s._day}</b>${d||"&nbsp;"}</span>
         <span class="sname"><span class="snum">${NUM[s.id]}</span>${esc(s.name)}</span>
-        <span class="ssub">${chip}<span class="sub">${sub}</span></span>
+        <span class="ssub">${chip}${(()=>{if(!(Number(s.nights)>0)||s.kind==="day")return"";const b=BOOK_CHIP[s.campStatus||""];return b?`<span class="chip ${b[1]}">${b[0]}</span>`:`<span class="chip bk-none">Not booked</span>`})()}<span class="sub">${sub}</span></span>
       </button>${S.open===s.id?stopEditor(s):""}</li>`;
   });
   const after=S.stops.map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join("");
@@ -375,6 +380,7 @@ document.addEventListener("click",async e=>{
   const s=cur();
   if(a==="hadd"&&s){const n=document.getElementById("hn-new").value.trim();if(!n){document.getElementById("hn-new").focus();return}
     await w("stops/"+s.id,{highlights:[...(s.highlights||[]),{n,k:document.getElementById("hk-new").value}]});return}
+  if((a==="hup"||a==="hdown")&&s){commitEdits();const h=(s.highlights||[]).map(x=>({...x})),i=+el.dataset.i,j=a==="hup"?i-1:i+1;if(j<0||j>=h.length)return;[h[i],h[j]]=[h[j],h[i]];await w("stops/"+s.id,{highlights:h});return}
   if(a==="hdel"&&s){const h=[...(s.highlights||[])];h.splice(+el.dataset.i,1);await w("stops/"+s.id,{highlights:h});return}
   if((a==="up"||a==="down")&&s){const i=S.stops.indexOf(s),j=a==="up"?i-1:i+1,o=S.stops[j];if(!o)return;
     const so=s.order,oo=o.order;await w("stops/"+s.id,{order:oo});await w("stops/"+o.id,{order:so});return}
