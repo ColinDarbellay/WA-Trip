@@ -618,16 +618,13 @@ function noteCard(n){
   const open=S.ntOpen===n.id,dis=S.ro?"disabled":"";
   const preview=(n.body||"").replace(/\s+/g," ").trim();
   const head=`<button class="stop-head" data-act="nttoggle" aria-expanded="${open}">
-      <span class="daybox"><b style="font-size:13px">${esc(n.cat||"General")}</b>${ntDate(n.updated)}</span>
+      <span class="daybox">${ntDate(n.updated)}</span>
       <span class="sname">${esc(n.title||"Untitled note")}</span><span></span>
       <span class="ssub">${esc(preview)||"Empty note"}</span></button>`;
   if(!open)return `<li class="stop" data-nid="${n.id}">${head}</li>`;
   const conf=S.ntConfirm===n.id?`<div class="confirm actbar">Really delete “${esc(n.title||"this note")}”? <button class="btn danger" data-act="ntdelyes">Delete</button><button class="btn ghost" data-act="ntdelno">Keep</button></div>`:"";
   return `<li class="stop sel" data-nid="${n.id}">${head}<div class="ed">
-    <div class="grid2">
-      <label class="f">Title<input id="ntt-${n.id}" data-nt="title" value="${esc(n.title)}" ${dis}></label>
-      <label class="f">Topic<input id="ntc-${n.id}" data-nt="cat" list="nt-cats" value="${esc(n.cat)}" ${dis}></label>
-    </div>
+    <label class="f">Title<input id="ntt-${n.id}" data-nt="title" value="${esc(n.title)}" ${dis}></label>
     <label class="f">Note<textarea id="ntb-${n.id}" data-nt="body" class="notebody" placeholder="What you found, prices, pros and cons, links…" ${dis}>${esc(n.body)}</textarea></label>
     ${n.body&&/https?:\/\//.test(n.body)?`<div class="notelinks"><div class="eyebrow" style="font-size:13px">Links in this note</div>${(n.body.match(/https?:\/\/[^\s<]+[^\s<.,;:!?)\]'"]/g)||[]).map(u=>`<a href="${esc(u)}" target="_blank" rel="noopener">${esc(u.replace(/^https?:\/\/(www\.)?/,"").slice(0,60))}</a>`).join("")}</div>`:""}
     ${n.by?`<div class="note">Last edited by ${esc(n.by)}${n.updated?` on ${ntDate(n.updated)}`:""}</div>`:""}
@@ -638,18 +635,14 @@ function renderNotes(){
   const dis=S.ro?"disabled":"";
   const cats=[...new Set([...NOTE_CATS,...S.notes.map(n=>n.cat).filter(Boolean)])];
   const q=S.ntQ.trim().toLowerCase();
-  const vis=S.notes.filter(n=>(!q||((n.title||"")+" "+(n.body||"")+" "+(n.cat||"")).toLowerCase().includes(q)))
+  const vis=S.notes.filter(n=>(!q||((n.title||"")+" "+(n.body||"")).toLowerCase().includes(q)))
     .sort((a,b)=>String(b.updated||"").localeCompare(String(a.updated||"")));
   const cnt=c=>S.notes.filter(n=>c==="all"||(n.cat||"General")===c).length;
   app.innerHTML=`<div style="display:grid;gap:14px;max-width:900px">
-    <datalist id="nt-cats">${cats.map(c=>`<option value="${esc(c)}">`).join("")}</datalist>
     <div class="row" style="gap:8px"><input id="nt-q" type="search" placeholder="Search notes" value="${esc(S.ntQ)}" style="flex:1;min-width:180px;width:auto" aria-label="Search notes"></div>
     ${vis.length?`<ul class="log" style="gap:8px">${vis.map(noteCard).join("")}</ul>`:`<div class="empty">${S.notes.length?"No notes match.":"No notes yet. Write down what you find about the van, flights, surf or anything else, and Isabel sees it too."}</div>`}
     <form id="addNote" class="panel"><h2>New note</h2>
-      <div class="grid2">
-        <label class="f">Title<input id="an-t" required placeholder="e.g. Camper rental comparison"></label>
-        <label class="f">Topic<input id="an-c" list="nt-cats" value="General" placeholder="Van, Flights, Surf…"></label>
-      </div>
+      <label class="f">Title<input id="an-t" required placeholder="e.g. Camper rental comparison"></label>
       <label class="f">Note<textarea id="an-b" class="notebody" placeholder="Paste what you found: prices, conditions, links…"></textarea></label>
       <div class="row"><button class="btn" type="submit" ${dis}>Add note</button><span class="note" id="an-err"></span></div>
     </form>
@@ -675,9 +668,9 @@ document.addEventListener("change",async e=>{
 document.addEventListener("submit",async e=>{
   if(e.target.id!=="addNote")return;e.preventDefault();
   const title=document.getElementById("an-t").value.trim(),err=document.getElementById("an-err");if(!title){err.textContent="Give the note a title.";return}
-  const cat=document.getElementById("an-c").value.trim()||"General",body=document.getElementById("an-b").value;
+  const body=document.getElementById("an-b").value;
   const id="nt-"+mkid();S.ntOpen=null;
-  await w("notes/"+id,{title,cat,body,updated:new Date().toISOString(),by:Store.user?Store.user.email.split("@")[0]:""},"set");
+  await w("notes/"+id,{title,body,updated:new Date().toISOString(),by:Store.user?Store.user.email.split("@")[0]:""},"set");
   ["an-t","an-b"].forEach(x=>{const f=document.getElementById(x);if(f)f.value=""});toast("Note added");
 });
 
