@@ -28,9 +28,9 @@ function placeLink(s){return `https://www.google.com/maps/search/?api=1&query=${
 function nightsBetween(a,b){if(!a||!b)return null;const x=new Date(a+"T00:00:00"),y=new Date(b+"T00:00:00");if(isNaN(x)||isNaN(y))return null;return Math.round((y-x)/864e5)}
 function dateSummary(planned){
   const st=S.settings,parts=[],trip=nightsBetween(st.start,st.depart),rt=nightsBetween(st.rtStart,st.rtEnd);
-  if(trip!=null)parts.push(trip<0?`<span class="warn">Departure is before arrival</span>`:`${trip} nights in Australia`);
-  if(rt!=null)parts.push(rt<0?`<span class="warn">Road trip end is before its start</span>`:`${rt} nights on the road`);
-  if(trip!=null&&trip>=0&&planned){const d=planned-trip;parts.push(d===0?"route plan fits exactly":d>0?`<span class="warn">route plan is ${d} night${d>1?"s":""} too long</span>`:`${-d} night${d<-1?"s":""} left to plan`)}
+  if(trip!=null&&trip<0)parts.push(`<span class="warn">Departure is before arrival</span>`);
+  if(rt!=null&&rt<0)parts.push(`<span class="warn">Road trip end is before its start</span>`);
+  if(trip!=null&&trip>=0&&planned){const d=planned-trip;parts.push(d===0?"Route plan fits exactly":d>0?`<span class="warn">Route plan is ${d} night${d>1?"s":""} too long</span>`:`Route plan: ${-d} night${d<-1?"s":""} left to plan`)}
   return parts.join(" · ");
 }
 function renderStats(){
@@ -43,6 +43,8 @@ function renderStats(){
      <div class="stat"><b>${money(planned)}</b><span>budget</span></div>
      <div class="stat"><b>${done}/${S.packing.length}</b><span>packed</span></div>`;
   [["startDate","start"],["rtStart","rtStart"],["rtEnd","rtEnd"],["departDate","depart"]].forEach(([id,k])=>{const el=document.getElementById(id);if(!el)return;if(document.activeElement!==el)el.value=S.settings[k]||"";el.disabled=S.ro});
+  const nn=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v==null||v<0?"":`${v} night${v===1?"":"s"}`};
+  nn("n-stay",nightsBetween(S.settings.start,S.settings.depart));nn("n-rt",nightsBetween(S.settings.rtStart,S.settings.rtEnd));
   const ds=document.getElementById("datesum");if(ds)ds.innerHTML=dateSummary(c.nights);
 }
 
