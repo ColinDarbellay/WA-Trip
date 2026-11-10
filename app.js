@@ -173,17 +173,29 @@ function legArrows(pts,earth){
     L.marker([lat,lon],{interactive:false,keyboard:false,icon:L.divIcon({className:"arw",iconSize:[22,22],iconAnchor:[11,11],
       html:`<svg viewBox="0 0 18 18" width="22" height="22" style="transform:rotate(${ang.toFixed(0)}deg)"><path d="M9 2 L15 14 L9 11 L3 14 Z" fill="${earth}" stroke="${tok("--surface")}" stroke-width="1.5" stroke-linejoin="round"/></svg>`})}).addTo(LAYER)}
 }
+const FAR_Z=8;
 function drawMap(){
   if(!MAP)return;LAYER.clearLayers();
-  const earth=tok("--earth"),ocean=tok("--ocean"),surf=tok("--surface");
+  const earth=tok("--earth"),ocean=tok("--ocean"),surf=tok("--surface"),far=MAP.getZoom()<FAR_Z;MAP._far=far;
   S.stops.forEach((s,i)=>{if(isOpt(s))return;const p=prevRoute(i);if(!p||!hasXY(p)||!hasXY(s))return;
     const pts=legOk(p,s)?s.route.c:[[p.lat,p.lon],[s.lat,s.lon]];
-    if(legOk(p,s))L.polyline(pts,{color:earth,weight:4,opacity:.85,lineJoin:"round"}).addTo(LAYER);
+    if(legOk(p,s))L.polyline(pts,{color:earth,weight:far?3:4,opacity:.85,lineJoin:"round"}).addTo(LAYER);
     else L.polyline(pts,{color:earth,weight:2,opacity:.7,dashArray:"6 8"}).addTo(LAYER);
-    legArrows(pts,earth)});
+    if(!far)legArrows(pts,earth)});
   const groups=new Map();
   const NUM=routeNums();
   S.stops.forEach((s,i)=>{if(!hasXY(s))return;const k=s.lat.toFixed(3)+","+s.lon.toFixed(3);if(!groups.has(k))groups.set(k,[]);groups.get(k).push({s,num:isOpt(s)?"O":NUM[s.id]})});
+  if(far){
+    /* Zoomed out: only overnight stops as small dots (and the stop that is open in the list) */
+    groups.forEach(list=>{
+      const sel=list.find(x=>x.s.id===S.open),bases=list.filter(x=>!isOpt(x.s)&&x.s.kind!=="day"&&(Number(x.s.nights)||0)>0);
+      if(sel){const s=sel.s;const m=L.marker([s.lat,s.lon],{zIndexOffset:1000,icon:L.divIcon({className:"",iconSize:[30,26],iconAnchor:[15,13],html:`<div class="num ${bases.includes(sel)?"base":"day"} sel">${sel.num}</div>`})}).addTo(LAYER);
+        m.bindTooltip(`${sel.num==="O"?"Optional:":sel.num+"."} ${esc(s.name)}`,{direction:"right",offset:[16,0],permanent:true,className:"tip"});m.on("click",()=>pickStop(s.id));return}
+      if(!bases.length)return;const s=bases[0].s;
+      const d=L.circleMarker([s.lat,s.lon],{radius:5.5,weight:2,color:surf,fillColor:earth,fillOpacity:1}).addTo(LAYER);
+      d.bindTooltip(bases.map(x=>`${x.num}. ${esc(x.s.name)}`).join("<br>"),{direction:"right",offset:[8,0],className:"tip"});
+      d.on("click",()=>pickStop(s.id))});
+    return}
   groups.forEach(list=>{
     const p0=list[0].s;L.circleMarker([p0.lat,p0.lon],{radius:3.5,weight:1.5,color:tok("--surface"),fillColor:tok("--ink"),fillOpacity:1,interactive:false}).addTo(LAYER);
     const k=list.length,gap=4;
@@ -294,7 +306,7 @@ function renderRoute(){
   });
   const after=S.stops.map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join("");
   app.innerHTML=`<div class="route trip">
-    <div class="mapbox"><div id="mapslot"></div><div class="mapcredit" id="mapcredit"></div><div class="maplegend"><span><i class="dot" style="background:var(--earth)"></i>Overnight</span><span><i class="dot" style="border:2px solid var(--ocean)"></i>Day stop</span><span>Numbers follow the route · arrows show the direction</span><span class="row" style="gap:6px;margin-left:auto">${!S.surf.length&&Store.user&&Store.member&&!S.ro?`<button class="btn ghost small" data-act="surfseed">Load 16 suggested surf spots</button>`:""}<button class="btn ghost small${S.surfMode?" on":""}" data-act="sfmode">${S.surfMode?"Tap the map to place it…":"+ Surf spot"}</button><button class="btn ghost small" data-act="fitall">Whole trip</button></span></div></div>
+    <div class="mapbox"><div id="mapslot"></div><div class="mapcredit" id="mapcredit"></div><div class="maplegend"><span><i class="dot" style="background:var(--earth)"></i>Overnight</span><span><i class="dot" style="border:2px solid var(--ocean)"></i>Day stop</span><span>Zoom in for day stops, numbers and directions</span><span class="row" style="gap:6px;margin-left:auto">${!S.surf.length&&Store.user&&Store.member&&!S.ro?`<button class="btn ghost small" data-act="surfseed">Load 16 suggested surf spots</button>`:""}<button class="btn ghost small${S.surfMode?" on":""}" data-act="sfmode">${S.surfMode?"Tap the map to place it…":"+ Surf spot"}</button><button class="btn ghost small" data-act="fitall">Whole trip</button></span></div></div>
     <div>
       <div class="section-h"><h2>Stops &amp; drives</h2><span class="note">${c.days} days · road km, ≈ = estimate</span></div>${(()=>{const miss=S.stops.filter(x=>!hasXY(x));return miss.length?`<div class="status" style="margin-bottom:10px">${miss.length} stop${miss.length>1?"s have":" has"} no location yet: ${miss.map(x=>`<button class="linkbtn" data-act="fixloc" data-id="${x.id}">${esc(x.name)}</button>`).join(", ")}. Open it and pick the place from the search.</div>`:""})()}
       ${S.stops.length?`<ul class="log">${items}</ul>`:(Store.user&&Store.member&&!S.ro?`<div class="empty">No stops yet. <button class="btn" data-act="importseed">Load our saved route (25 stops)</button></div>`:`<div class="empty">${Store.user?"No stops yet. Add your arrival city below.":"Sign in at the top to load your trip."}</div>`)}
@@ -505,7 +517,7 @@ function setupSurf(ctrl){
     b.addEventListener("click",()=>{const on=!MAP.hasLayer(LAYER);on?LAYER.addTo(MAP):MAP.removeLayer(LAYER);S.routeHidden=!on;sync()});
     MAP.on("layeradd layerremove",e=>{if(e.layer===LAYER)sync()});sync();return b}});
   new RouteCtl().addTo(MAP);
-  const zc=()=>{const z=MAP.getZoom();mapEl.classList.toggle("z9",z>=9)};MAP.on("zoomend",zc);zc();
+  const zc=()=>{const z=MAP.getZoom();mapEl.classList.toggle("z9",z>=9);if((z<FAR_Z)!==MAP._far)drawMap()};MAP.on("zoomend",zc);zc();
   MAP.on("contextmenu",e=>addSpotAt(e.latlng));
   MAP.on("click",e=>{if(S.surfMode){S.surfMode=false;mapEl.classList.remove("placing");updateSurfBtn();addSpotAt(e.latlng)}});
   let t=null,start=null;
