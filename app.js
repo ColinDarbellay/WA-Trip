@@ -162,11 +162,11 @@ function mountMap(){mapEl.classList.toggle("surftab",S.tab==="surf");
 }
 function fitAll(){const pts=S.stops.filter(hasXY).map(s=>[s.lat,s.lon]);if(MAP&&pts.length)MAP.fitBounds(pts,{padding:[24,24]})}
 const legOk=(p,s)=>s.route&&s.route.v===2&&s.route.for===p.id&&s.route.from===`${p.lat},${p.lon}`&&s.route.to===`${s.lat},${s.lon}`;
-function legArrows(pts,earth){
+function legArrows(pts,earth,maxN){
   const cl=Math.cos(pts[0][0]*Math.PI/180),seg=[];let tot=0;
   for(let i=1;i<pts.length;i++){const dx=(pts[i][1]-pts[i-1][1])*cl,dy=pts[i][0]-pts[i-1][0],d=Math.hypot(dx,dy);seg.push(d);tot+=d}
   if(!tot)return;
-  const n=tot>2.5?3:tot>0.9?2:1;
+  let n=tot>2.5?3:tot>0.9?2:1;if(maxN!=null){if(tot<maxN.min)return;n=Math.min(n,maxN.n)}
   for(let k=1;k<=n;k++){let want=tot*k/(n+1),i=0;while(i<seg.length-1&&want>seg[i]){want-=seg[i];i++}
     const a=pts[i],b=pts[i+1],t=seg[i]?want/seg[i]:0,lat=a[0]+(b[0]-a[0])*t,lon=a[1]+(b[1]-a[1])*t;
     const ang=Math.atan2((b[1]-a[1])*cl,b[0]-a[0])*180/Math.PI;
@@ -181,7 +181,7 @@ function drawMap(){
     const pts=legOk(p,s)?s.route.c:[[p.lat,p.lon],[s.lat,s.lon]];
     if(legOk(p,s))L.polyline(pts,{color:earth,weight:far?3:4,opacity:.85,lineJoin:"round"}).addTo(LAYER);
     else L.polyline(pts,{color:earth,weight:2,opacity:.7,dashArray:"6 8"}).addTo(LAYER);
-    if(!far)legArrows(pts,earth)});
+    if(!far)legArrows(pts,earth);else legArrows(pts,earth,{n:1,min:1.1})});
   const groups=new Map();
   const NUM=routeNums();
   S.stops.forEach((s,i)=>{if(!hasXY(s))return;const k=s.lat.toFixed(3)+","+s.lon.toFixed(3);if(!groups.has(k))groups.set(k,[]);groups.get(k).push({s,num:isOpt(s)?"O":NUM[s.id]})});
@@ -192,7 +192,7 @@ function drawMap(){
       if(sel){const s=sel.s;const m=L.marker([s.lat,s.lon],{zIndexOffset:1000,icon:L.divIcon({className:"",iconSize:[30,26],iconAnchor:[15,13],html:`<div class="num ${bases.includes(sel)?"base":"day"} sel">${sel.num}</div>`})}).addTo(LAYER);
         m.bindTooltip(`${sel.num==="O"?"Optional:":sel.num+"."} ${esc(s.name)}`,{direction:"right",offset:[16,0],permanent:true,className:"tip"});m.on("click",()=>pickStop(s.id));return}
       if(!bases.length)return;const s=bases[0].s;
-      const d=L.circleMarker([s.lat,s.lon],{radius:5.5,weight:2,color:surf,fillColor:earth,fillOpacity:1}).addTo(LAYER);
+      const z=MAP.getZoom(),d=L.circleMarker([s.lat,s.lon],{radius:Math.max(2.5,Math.min(5.5,z-2.2)),weight:z<5.5?1.5:2,color:surf,fillColor:earth,fillOpacity:1}).addTo(LAYER);
       d.bindTooltip(bases.map(x=>`${x.num}. ${esc(x.s.name)}`).join("<br>"),{direction:"right",offset:[8,0],className:"tip"});
       d.on("click",()=>pickStop(s.id))});
     return}
@@ -517,7 +517,7 @@ function setupSurf(ctrl){
     b.addEventListener("click",()=>{const on=!MAP.hasLayer(LAYER);on?LAYER.addTo(MAP):MAP.removeLayer(LAYER);S.routeHidden=!on;sync()});
     MAP.on("layeradd layerremove",e=>{if(e.layer===LAYER)sync()});sync();return b}});
   new RouteCtl().addTo(MAP);
-  const zc=()=>{const z=MAP.getZoom();mapEl.classList.toggle("z9",z>=9);if((z<FAR_Z)!==MAP._far)drawMap()};MAP.on("zoomend",zc);zc();
+  const zc=()=>{const z=MAP.getZoom();mapEl.classList.toggle("z9",z>=9);if((z<FAR_Z)!==MAP._far||z<FAR_Z)drawMap()};MAP.on("zoomend",zc);zc();
   MAP.on("contextmenu",e=>addSpotAt(e.latlng));
   MAP.on("click",e=>{if(S.surfMode){S.surfMode=false;mapEl.classList.remove("placing");updateSurfBtn();addSpotAt(e.latlng)}});
   let t=null,start=null;

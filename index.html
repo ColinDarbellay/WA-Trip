@@ -278,7 +278,9 @@ body{margin:0}
 .addbar{margin-top:16px}
 /* Map: smaller markers and arrows when zoomed out */
 #lmap.far .num{scale:.8}
-#lmap.far .arw svg{scale:.62}
+#lmap.far .arw svg{scale:.55}
+#lmap:not(.z9) .num{scale:.82}
+#lmap:not(.z9) .arw svg{scale:.75}
 #lmap.far .surfpin{scale:.75}
 .routetoggle{display:none}
 #lmap.surftab .routetoggle{display:flex}
