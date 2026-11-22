@@ -1,4 +1,4 @@
-const APP_VERSION="61";
+const APP_VERSION="62";
 const CATS=["Camper rental","Flights","Fuel","Campsites","Food","Activities","Other"];
 const BOOK=[["","Not booked"],["tobook","To book"],["requested","Requested"],["booked","Booked"],["paid","Booked & paid"],["none","No booking needed"]];
 const BOOK_CHIP={tobook:["To book","bk-todo"],requested:["Requested","bk-wait"],booked:["Booked","bk-ok"],paid:["Paid","bk-ok"],none:["Free camp","bk-free"]};
@@ -208,7 +208,11 @@ function drawMap(){
       const m=L.marker([s.lat,s.lon],{zIndexOffset:sel?1000:0,keyboard:true,title:`${x.num==='O'?'Optional:':x.num+'.'} ${s.name}`,
         icon:L.divIcon({className:"",iconSize:[w,26],iconAnchor:[ax,-6],
           html:`<div class="num ${base?"base":"day"}${sel?" sel":""}${opt?" opt":""}">${x.num}</div>`})}).addTo(LAYER);
-      m.bindTooltip(`${x.num==='O'?'Optional:':x.num+'.'} ${esc(s.name)}${n?` \u00b7 ${n} night${n>1?"s":""}`:""}`,{direction:"right",offset:[w-ax+2,19],permanent:sel,className:"tip"});
+      if(sel)m.bindTooltip(`${x.num==='O'?'Optional:':x.num+'.'} ${esc(s.name)}${n?` \u00b7 ${n} night${n>1?"s":""}`:""}`,{direction:"right",offset:[w-ax+2,19],permanent:true,className:"tip"});
+      else if(j===k-1&&!list.some(y=>y.s.id===S.open)){
+        const nm=[...new Set(list.map(y=>y.s.name.replace(/\s*\(.*?\)\s*/g," ").trim()))].join(" · ");
+        m.bindTooltip(esc(nm),{direction:"right",offset:[w-ax+2,19],permanent:true,interactive:false,className:"stoplabel"});
+        if(MAP.getZoom()>=9){const x1=pp.x-ax+w+4;OBS.push({rect:[x1,pp.y+8,x1+nm.length*7+18,pp.y+30]})}}
       m.on("click",()=>pickStop(s.id))});
   });
   placeArrows(LEGS,OBS,false,earth);
@@ -228,7 +232,7 @@ function placeArrows(legs,obs,far,earth){
       for(const off of [0,.18,-.18,.36,-.36]){
         const pos=step*k+off*step;if(pos<ar*2||pos>tot-ar*2)continue;
         const c=at(pos);
-        if(obs.some(o=>c.p.distanceTo(o.p)<o.r+ar+gap))continue;
+        if(obs.some(o=>o.rect?(Math.hypot(Math.max(o.rect[0]-c.p.x,0,c.p.x-o.rect[2]),Math.max(o.rect[1]-c.p.y,0,c.p.y-o.rect[3]))<ar+gap):c.p.distanceTo(o.p)<o.r+ar+gap))continue;
         if(placed.some(q=>c.p.distanceTo(q)<minAA))continue;
         placed.push(c.p);
         L.marker(MAP.layerPointToLatLng(c.p),{interactive:false,keyboard:false,zIndexOffset:-200,icon:L.divIcon({className:"arw",iconSize:[22,22],iconAnchor:[11,11],

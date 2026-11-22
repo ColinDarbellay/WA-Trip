@@ -287,6 +287,10 @@ body{margin:0}
 .sflabel{display:none;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:999px;padding:2px 8px;font-family:var(--body);font-size:12px;font-weight:700;box-shadow:none;white-space:nowrap}
 .sflabel::before{display:none}
 #lmap.surftab.z9 .sflabel{display:block}
+.stoplabel{display:none;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:999px;padding:2px 8px;font-family:var(--body);font-size:12px;font-weight:700;box-shadow:none;white-space:nowrap;pointer-events:none}
+.stoplabel::before{display:none}
+#lmap.z9 .stoplabel{display:block}
+#lmap.z9:not(.surftab) .sflabel{display:block}
 .leaflet-bottom.leaflet-left .leaflet-control-layers{margin:0 0 10px 10px}
 @media (max-width:600px){.surftoggle{padding:0 11px;font-size:12px}}
 .mapcredit{font-size:10.5px;line-height:1.4;color:var(--muted);padding:4px 4px 0}
