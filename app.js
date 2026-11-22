@@ -1,4 +1,4 @@
-const APP_VERSION="62";
+const APP_VERSION="63";
 const CATS=["Camper rental","Flights","Fuel","Campsites","Food","Activities","Other"];
 const BOOK=[["","Not booked"],["tobook","To book"],["requested","Requested"],["booked","Booked"],["paid","Booked & paid"],["none","No booking needed"]];
 const BOOK_CHIP={tobook:["To book","bk-todo"],requested:["Requested","bk-wait"],booked:["Booked","bk-ok"],paid:["Paid","bk-ok"],none:["Free camp","bk-free"]};
@@ -624,9 +624,11 @@ function surfCard(sp){
       <span class="daybox"><span class="surfpin lvl-${esc(sp.level)}" style="margin:0 auto">${WAVE_SVG}</span></span>
       <span class="sname">${esc(sp.name)}</span><span class="chip lv-${esc(sp.level)}">${esc(cap(sp.level))}</span>
       <span class="ssub">${esc(cap(sp.wave))} break${nr?` · ${Math.round(nr.km)} km from ${esc(nr.s.name)}`:""}${sp.note?` · ${esc(sp.note)}`:""}</span></button>`;
-  if(!open)return `<li class="stop" data-sid="${sp.id}">${head}</li>`;
+  const st=+sp.stars||0,stars=`<div class="sfstars" role="group" aria-label="Interest">${[1,2,3].map(n=>`<button class="sfstar${n<=st?" on":""}" data-act="sfstar" data-v="${n}" aria-pressed="${n===st}" aria-label="${n} star${n>1?"s":""}" ${dis}>${n<=st?"★":"☆"}</button>`).join("")}</div>`;
+  const safe=/^https?:\/\//i.test(sp.src||"")?sp.src:"";
+  if(!open)return `<li class="stop sfcard" data-sid="${sp.id}">${head}${stars}</li>`;
   const conf=S.sfConfirm===sp.id?`<div class="confirm actbar">Really delete ${esc(sp.name)}? <button class="btn danger" data-act="sfcdelyes">Delete</button><button class="btn ghost" data-act="sfcdelno">Keep</button></div>`:"";
-  return `<li class="stop sel" data-sid="${sp.id}">${head}<div class="ed">
+  return `<li class="stop sfcard sel" data-sid="${sp.id}">${head}${stars}<div class="ed">
     <div class="grid2">
       <label class="f">Name<input id="sfn-${sp.id}" data-sf="name" value="${esc(sp.name)}" ${dis}></label>
       <label class="f">Wave type<select id="sfw-${sp.id}" data-sf="wave" ${dis}>${WAVES.map(x=>`<option value="${x}" ${x===sp.wave?"selected":""}>${cap(x)} break</option>`).join("")}</select></label>
@@ -634,7 +636,8 @@ function surfCard(sp){
       <label class="f">Coordinates<input id="sfc-${sp.id}" data-sf="coords" value="${typeof sp.lat==="number"?sp.lat+", "+sp.lon:""}" placeholder="-33.87, 114.99" ${dis}></label>
     </div>
     <label class="f">Notes<textarea id="sfno-${sp.id}" data-sf="note" placeholder="Best swell, wind, tide, parking…" ${dis}>${esc(sp.note)}</textarea></label>
-    <div class="row"><button class="btn ghost" data-act="sfshow">Show on map</button><button class="btn ghost" data-act="sfctrip" ${dis}>Add to trip</button></div>
+    <label class="f">Source link<input id="sfu-${sp.id}" data-sf="src" type="url" inputmode="url" value="${esc(sp.src||"")}" placeholder="https://…" ${dis}></label>
+    <div class="row">${safe?`<a class="btn ghost" href="${esc(safe)}" target="_blank" rel="noopener">Source ↗</a>`:""}<button class="btn ghost" data-act="sfshow">Show on map</button><button class="btn ghost" data-act="sfctrip" ${dis}>Add to trip</button></div>
     ${conf||`<div class="actbar"><button class="btn ghost" data-act="sfcdel" style="color:var(--earth)" ${dis}>Delete spot</button><button class="btn" data-act="sfcsave">Save</button></div>`}</div></li>`;
 }
 function renderSurf(){
@@ -685,6 +688,7 @@ document.addEventListener("click",async e=>{
   if(a==="sftoggle")commitEdits();
   if(a==="sftoggle"){S.sfOpen=S.sfOpen===id?null:id;S.sfConfirm=null;render();if(S.sfOpen&&MAP&&typeof sp.lat==="number")MAP.panTo([sp.lat,sp.lon]);return}
   if(a==="sfshow"){openSpotOnMap(id);return}
+  if(a==="sfstar"){if(S.ro){toast("Sign in first.");return}const v=+el.dataset.v;await w("surf/"+id,{stars:(+sp.stars||0)===v?0:v});return}
   if(a==="sfcdel"){S.sfConfirm=id;render();return}
   if(a==="sfcdelno"){S.sfConfirm=null;render();return}
   if(a==="sfcdelyes"){S.sfConfirm=null;S.sfOpen=null;await w("surf/"+id,null,"delete");toast(`Deleted ${sp.name}`);return}
@@ -697,6 +701,7 @@ document.addEventListener("change",async e=>{
   const el=e.target,f=el.dataset.sf;if(!f)return;const li=el.closest("li[data-sid]");if(!li)return;const id=li.dataset.sid;
   if(f==="coords"){const xy=parseXY(el.value);if(!xy){toast("Use the format -33.87, 114.99");return}await w("surf/"+id,xy);return}
   if(f==="name"&&!el.value.trim()){toast("A spot needs a name");return}
+  if(f==="src"){const v=el.value.trim();if(v&&!/^https?:\/\//i.test(v)){toast("Links start with https://");return}await w("surf/"+id,{src:v});return}
   await w("surf/"+id,{[f]:f==="note"?el.value.trim():el.value});
 });
 document.addEventListener("submit",async e=>{
@@ -827,6 +832,14 @@ async function restoreSurfSpots(){
       if(Math.abs((sp.lat||0)-d.lat)>1e-5||Math.abs((sp.lon||0)-d.lon)>1e-5){await put("surf",id,{...Store.docs.get("surf/"+id),lat:d.lat,lon:d.lon});n++}}
     await put("trip","settings",{...(Store.docs.get("trip/settings")||{}),surfRestored:1});
     if(n)toast(`${n} surf spot${n>1?"s":""} moved back to the original position`)}catch(_){}
+  await addSurfSources();
+}
+/* One-time: add the source links to the suggested surf spots */
+async function addSurfSources(){
+  if(S.settings&&S.settings.surfSrc===1)return;
+  try{const seed=await (await fetch("surf-seed.json",{cache:"no-cache"})).json();
+    for(const [id,d] of Object.entries(seed)){const doc=Store.docs.get("surf/"+id);if(!doc||!d.src||doc.src)continue;await put("surf",id,{...doc,src:d.src})}
+    await put("trip","settings",{...(Store.docs.get("trip/settings")||{}),surfSrc:1})}catch(_){}
 }
 
 (async()=>{

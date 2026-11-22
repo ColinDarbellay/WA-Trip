@@ -153,6 +153,15 @@ button{font:inherit;cursor:pointer}
 .daybox b{display:block;color:var(--earth);font-family:var(--display);font-weight:600;font-size:16px}
 .sname{font-family:var(--display);font-weight:600;font-size:19px;min-width:0}
 .ssub{color:var(--muted);font-size:13px;grid-column:2/4;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sfcard{display:grid;grid-template-columns:minmax(0,1fr) auto}
+.sfcard>.stop-head{grid-column:1/-1;grid-row:1}
+.sfcard>.stop-head .ssub{padding-right:88px}
+.sfcard>.ed{grid-column:1/-1}
+.sfstars{grid-column:2;grid-row:1;align-self:end;display:flex;padding:0 8px 4px 0;position:relative}
+.sfstar{background:none;border:0;color:var(--muted);font-size:19px;line-height:1;width:28px;height:34px;padding:0;cursor:pointer;border-radius:8px}
+.sfstar.on{color:var(--sun)}
+.sfstar:hover:not(:disabled){color:var(--sun)}
+.sfstar:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
 .chip{font-size:12px;font-weight:700;padding:3px 10px;border-radius:999px;white-space:nowrap;background:var(--earth-soft);color:var(--earth)}
 .chip.day{background:var(--ocean-soft);color:var(--ocean)}
 .chip.opt{background:transparent;color:var(--muted);border:1px dashed var(--muted)}
