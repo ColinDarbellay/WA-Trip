@@ -1,4 +1,4 @@
-const APP_VERSION="60";
+const APP_VERSION="61";
 const CATS=["Camper rental","Flights","Fuel","Campsites","Food","Activities","Other"];
 const BOOK=[["","Not booked"],["tobook","To book"],["requested","Requested"],["booked","Booked"],["paid","Booked & paid"],["none","No booking needed"]];
 const BOOK_CHIP={tobook:["To book","bk-todo"],requested:["Requested","bk-wait"],booked:["Booked","bk-ok"],paid:["Paid","bk-ok"],none:["Free camp","bk-free"]};
@@ -571,20 +571,18 @@ function surfPopup(sp){
     </div>
     <textarea id="sf-note" placeholder="Notes: best swell, wind, tide, parking…" aria-label="Notes">${esc(sp.note)}</textarea>
     ${conf?`<div class="confirm">Delete ${esc(sp.name)}? <button class="btn danger" data-act="sfdelyes">Delete</button><button class="btn ghost" data-act="sfdelno">Keep</button></div>`:
-    `<div class="row" style="gap:6px"><button class="btn" data-act="sfsave">Save</button><button class="btn ghost" data-act="sftrip">Add to trip</button><button class="btn ghost" data-act="sfdel" style="color:var(--earth)">Delete</button></div>`}
-    <div class="note">Drag the marker to move it.</div></div>`;
+    `<div class="row" style="gap:6px"><button class="btn" data-act="sfsave">Save</button><button class="btn ghost" data-act="sftrip">Add to trip</button><button class="btn ghost" data-act="sfdel" style="color:var(--earth)">Delete</button></div>`}</div>`;
 }
 function drawSurf(){
   if(!SURF)return;
   const keepOpen=S.openSurf||(SURF._openId||null);SURF.clearLayers();SURF._openId=null;
   S.surf.forEach(sp=>{if(typeof sp.lat!=="number")return;
-    const m=L.marker([sp.lat,sp.lon],{draggable:!S.ro,title:sp.name,zIndexOffset:-500,
+    const m=L.marker([sp.lat,sp.lon],{draggable:false,title:sp.name,zIndexOffset:-500,
       icon:L.divIcon({className:"",iconSize:[28,28],iconAnchor:[14,14],popupAnchor:[0,-12],html:`<div class="surfpin lvl-${esc(sp.level)}">${WAVE_SVG}</div>`})}).addTo(SURF);
     m.bindTooltip(`${esc(sp.name)}`,{permanent:true,direction:"right",offset:[14,0],className:"sflabel",interactive:false});
     m.bindPopup(()=>surfPopup(sp),{className:"sfpop",minWidth:280,maxWidth:320,autoPanPadding:[20,20]});
     m._sid=sp.id;m.on("popupopen",()=>{SURF._openId=sp.id;if(S.tab==="surf"&&S.sfOpen!==sp.id){S.sfOpen=sp.id;S.sfConfirm=null;schedule();setTimeout(()=>{const li=app.querySelector(`li[data-sid="${sp.id}"]`);li&&li.scrollIntoView({block:"nearest"})},50)}});
     m.on("popupclose",()=>{if(SURF._openId===sp.id)SURF._openId=null;S.sfConfirm=null});
-    m.on("dragend",async()=>{const p=m.getLatLng();await w("surf/"+sp.id,{lat:+p.lat.toFixed(5),lon:+p.lng.toFixed(5)})});
     if(sp.id===keepOpen)setTimeout(()=>m.openPopup(),0);
   });
   S.openSurf=null;
@@ -816,6 +814,17 @@ document.addEventListener("click",e=>{const li=e.target.closest("[data-geo]");if
 document.addEventListener("focusin",e=>{const li=e.target.closest(".hl li[data-hi]");if(!li)return;const sid=S.open;if(!sid)return;
   S.hlSel={sid,i:+li.dataset.hi};li.parentElement.querySelectorAll("li.on").forEach(x=>x!==li&&x.classList.remove("on"));li.classList.add("on")});
 
+/* One-time repair: put the suggested surf spots back on their original positions */
+async function restoreSurfSpots(){
+  if(!SB||!Store.user||!Store.member||S.ro||!Store.synced)return;
+  if(S.settings&&S.settings.surfRestored===1)return;
+  try{const seed=await (await fetch("surf-seed.json",{cache:"no-cache"})).json();let n=0;
+    for(const [id,d] of Object.entries(seed)){const sp=S.surf.find(x=>x.id===id);if(!sp)continue;
+      if(Math.abs((sp.lat||0)-d.lat)>1e-5||Math.abs((sp.lon||0)-d.lon)>1e-5){await put("surf",id,{...Store.docs.get("surf/"+id),lat:d.lat,lon:d.lon});n++}}
+    await put("trip","settings",{...(Store.docs.get("trip/settings")||{}),surfRestored:1});
+    if(n)toast(`${n} surf spot${n>1?"s":""} moved back to the original position`)}catch(_){}
+}
+
 (async()=>{
   try{const v=localStorage.getItem("wa-who");if(v&&["All",...WHO].includes(v))S.who=v}catch(_){}
   const h=location.hash.slice(1);if(["route","surf","budget","packing","notes"].includes(h))S.tab=h;
@@ -834,6 +843,6 @@ document.addEventListener("focusin",e=>{const li=e.target.closest(".hl li[data-h
   if(!SB)return;
   const {data:{session}}=await SB.auth.getSession();
   Store.user=session?session.user:null;updateAuth();render();
-  SB.auth.onAuthStateChange((_e,sess)=>{const was=Store.user&&Store.user.id;Store.user=sess?sess.user:null;Store.member=true;updateAuth();render();if(Store.user&&Store.user.id!==was){pull();listen()}});
-  if(Store.user){await pull();listen();fetchRoutes()}
+  SB.auth.onAuthStateChange((_e,sess)=>{const was=Store.user&&Store.user.id;Store.user=sess?sess.user:null;Store.member=true;updateAuth();render();if(Store.user&&Store.user.id!==was){pull().then(restoreSurfSpots);listen()}});
+  if(Store.user){await pull();listen();fetchRoutes();restoreSurfSpots()}
 })();
