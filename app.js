@@ -1,4 +1,4 @@
-const APP_VERSION="63";
+const APP_VERSION="64";
 const CATS=["Camper rental","Flights","Fuel","Campsites","Food","Activities","Other"];
 const BOOK=[["","Not booked"],["tobook","To book"],["requested","Requested"],["booked","Booked"],["paid","Booked & paid"],["none","No booking needed"]];
 const BOOK_CHIP={tobook:["To book","bk-todo"],requested:["Requested","bk-wait"],booked:["Booked","bk-ok"],paid:["Paid","bk-ok"],none:["Free camp","bk-free"]};
@@ -548,13 +548,7 @@ function setupSurf(ctrl){
     MAP.on("layeradd layerremove",e=>{if(e.layer===LAYER)sync()});sync();return b}});
   new RouteCtl().addTo(MAP);
   const zc=()=>{const z=MAP.getZoom();mapEl.classList.toggle("z9",z>=9);drawMap()};MAP.on("zoomend",zc);zc();
-  MAP.on("contextmenu",e=>addSpotAt(e.latlng));
   MAP.on("click",e=>{if(S.surfMode){S.surfMode=false;mapEl.classList.remove("placing");updateSurfBtn();addSpotAt(e.latlng)}});
-  let t=null,start=null;
-  mapEl.addEventListener("touchstart",e=>{if(e.touches.length!==1)return;start=e.touches[0];clearTimeout(t);
-    t=setTimeout(()=>{const r=mapEl.getBoundingClientRect();addSpotAt(MAP.containerPointToLatLng([start.clientX-r.left,start.clientY-r.top]))},650)},{passive:true});
-  mapEl.addEventListener("touchmove",e=>{if(start&&Math.hypot(e.touches[0].clientX-start.clientX,e.touches[0].clientY-start.clientY)>10)clearTimeout(t)},{passive:true});
-  mapEl.addEventListener("touchend",()=>clearTimeout(t));
   drawSurf();
 }
 function updateSurfBtn(){const b=document.querySelector('[data-act="sfmode"]');if(b){b.textContent=S.surfMode?"Tap the map to place it…":"+ Surf spot";b.classList.toggle("on",S.surfMode)}}
@@ -652,7 +646,7 @@ function renderSurf(){
   const empty=S.surf.length?`<div class="empty">No spots match these filters.</div>`:
     (Store.user&&Store.member&&!S.ro?`<div class="empty">No surf spots yet. <button class="btn" data-act="surfseed">Load 16 suggested surf spots</button></div>`:`<div class="empty">${Store.user?"No surf spots yet. Add one below.":"Sign in at the top to see your surf spots."}</div>`);
   app.innerHTML=`<div class="route trip">
-    <div class="mapbox"><div id="mapslot"></div><div class="mapcredit" id="mapcredit"></div><div class="maplegend"><span>Surf: <i class="dot" style="background:#7FD1AE;margin-left:4px"></i>beginner <i class="dot" style="background:var(--warn);margin-left:6px"></i>intermediate <i class="dot" style="background:#E06A6A;margin-left:6px"></i>advanced</span><span>Right-click or press and hold on the map to add a spot</span><span class="row" style="gap:6px;margin-left:auto"><button class="btn ghost small${S.surfMode?" on":""}" data-act="sfmode">${S.surfMode?"Tap the map to place it…":"+ Surf spot"}</button><button class="btn ghost small" data-act="sffit">All spots</button></span></div></div>
+    <div class="mapbox"><div id="mapslot"></div><div class="mapcredit" id="mapcredit"></div><div class="maplegend"><span>Surf: <i class="dot" style="background:#7FD1AE;margin-left:4px"></i>beginner <i class="dot" style="background:var(--warn);margin-left:6px"></i>intermediate <i class="dot" style="background:#E06A6A;margin-left:6px"></i>advanced</span><span class="row" style="gap:6px;margin-left:auto"><button class="btn ghost small${S.surfMode?" on":""}" data-act="sfmode">${S.surfMode?"Tap the map to place it…":"+ Surf spot"}</button><button class="btn ghost small" data-act="sffit">All spots</button></span></div></div>
     <div>
       <div class="section-h"><h2>Surf spots</h2><span class="note">${S.surf.length} spots · grouped by nearest stop on the route</span></div>
       <div style="display:grid;gap:8px;margin-bottom:6px">${chips(S.sfLevel,"sflevel",[["all","All levels"],...LEVELS.map(x=>[x,cap(x)])])}${chips(S.sfWave,"sfwave",[["all","All waves"],...WAVES.map(x=>[x,cap(x)+" break"])])}</div>
