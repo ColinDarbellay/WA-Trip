@@ -1,4 +1,4 @@
-const APP_VERSION="64";
+const APP_VERSION="65";
 const CATS=["Camper rental","Flights","Fuel","Campsites","Food","Activities","Other"];
 const BOOK=[["","Not booked"],["tobook","To book"],["requested","Requested"],["booked","Booked"],["paid","Booked & paid"],["none","No booking needed"]];
 const BOOK_CHIP={tobook:["To book","bk-todo"],requested:["Requested","bk-wait"],booked:["Booked","bk-ok"],paid:["Paid","bk-ok"],none:["Free camp","bk-free"]};
@@ -116,7 +116,7 @@ function updateAuth(){const _el=document.getElementById("auth");if(_el)_el.class
   if(!SB){el.innerHTML=`<span class="note">Sync isn't set up yet: add your Supabase details to config.js (see README).</span>`;return}
   if(!navigator.onLine){el.innerHTML=`<span class="pill off">Offline</span><span class="note">Showing the last saved version. Editing comes back when you're online.</span>`;return}
   if(!Store.user){el.innerHTML=`<form id="login" class="row" style="gap:6px"><input id="lg-mail" type="email" required placeholder="Email" autocomplete="username" style="width:auto;flex:1;min-width:170px"><input id="lg-pw" type="password" required minlength="6" placeholder="Password" autocomplete="current-password" style="width:auto;flex:1;min-width:130px"><button class="btn" type="submit">Sign in</button><button class="btn ghost" type="button" data-act="signup">Create account</button></form>`;return}
-  el.innerHTML=S.setPw?`<form id="setpw" class="row" style="gap:6px"><input id="sp-pw" type="password" required minlength="6" placeholder="New password (min. 6)" autocomplete="new-password" style="width:auto;flex:1;min-width:170px"><button class="btn" type="submit">Save password</button><button class="btn ghost" type="button" data-act="setpwcancel">Cancel</button></form>`:Store.member?`<details class="acct"><summary><span class="pill on">Synced</span><span class="sr-only">Account</span></summary><div class="acctmenu"><span class="note">Signed in as ${esc(Store.user.email)}<br>App version ${APP_VERSION}</span><div class="row" style="gap:6px"><button class="btn ghost small" data-act="setpw">Set password</button><button class="btn ghost small" data-act="logout">Sign out</button></div></div></details>`
+  el.innerHTML=S.setPw?`<form id="setpw" class="row" style="gap:6px"><input id="sp-pw" type="password" required minlength="6" placeholder="New password (min. 6)" autocomplete="new-password" style="width:auto;flex:1;min-width:170px"><button class="btn" type="submit">Save password</button><button class="btn ghost" type="button" data-act="setpwcancel">Cancel</button></form>`:Store.member?`<details class="acct"><summary><span class="pill on">Synced</span><span class="sr-only">Account</span></summary><div class="acctmenu"><span class="note">Signed in as ${esc(Store.user.email)}<br>App version ${APP_VERSION}</span><div class="row" style="gap:6px"><button class="btn ghost small" data-act="setpw">Set password</button><button class="btn ghost small" data-act="logout">Sign out</button></div><button class="btn ghost small" data-act="exporttrip">Export trip (file)</button></div></details>`
     :`<span class="pill off">No access</span><span class="note">${esc(Store.user.email)} isn't on the members list yet.</span><button class="btn ghost" data-act="logout">Sign out</button>`;
 }
 
@@ -857,3 +857,11 @@ async function addSurfSources(){
   SB.auth.onAuthStateChange((_e,sess)=>{const was=Store.user&&Store.user.id;Store.user=sess?sess.user:null;Store.member=true;updateAuth();render();if(Store.user&&Store.user.id!==was){pull().then(restoreSurfSpots);listen()}});
   if(Store.user){await pull();listen();fetchRoutes();restoreSurfSpots()}
 })();
+
+/* Export the whole trip as a JSON file (backup, or to share with Claude) */
+document.addEventListener("click",async e=>{if(!e.target.closest('[data-act="exporttrip"]'))return;
+  const out={exported:new Date().toISOString(),app:APP_VERSION,docs:{}};
+  for(const [k,v] of Store.docs){if(!v)continue;const d={...v};if(d.route&&typeof d.route==="object"){const {geom,coords,shape,poly,...rest}=d.route;d.route=rest}out.docs[k]=d}
+  const name=`wa-trip-${new Date().toISOString().slice(0,10)}.json`,blob=new Blob([JSON.stringify(out,null,1)],{type:"application/json"});
+  try{const f=new File([blob],name,{type:"application/json"});if(navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({files:[f],title:name});return}}catch(err){if(err&&err.name==="AbortError")return}
+  const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000);toast("Trip exported")});
